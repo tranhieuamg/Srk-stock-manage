@@ -91,21 +91,24 @@
         }
 
         function onScanSuccess(decodedText) {
-    // Basic validation: Is it 6 digits?
-    if (decodedText.length !== 6) {
-        alert("Invalid QR: Must be a 6-digit code.");
-        return;
+    // A. STOP THE CAMERA IMMEDIATELY
+    try {
+        await html5QrCode.stop();
+        document.getElementById('reader').style.display = 'none'; // Hide the black box
+    } catch (err) {
+        console.error("Failed to stop camera.", err);
     }
 
+    // B. PREPARE UI
     currentPartId = decodedText;
     const nameDisplay = document.getElementById('item-name');
     const controls = document.getElementById('controls');
     
-    nameDisplay.innerText = "Verifying Code...";
+    nameDisplay.innerText = "Checking Database...";
     nameDisplay.style.color = "orange";
     controls.style.display = 'block';
 
-    // Fetch name from Google Sheet
+    // C. LOOKUP FROM GOOGLE SHEETS
     fetch(`${GOOGLE_SCRIPT_URL}?id=${decodedText}`)
         .then(res => res.json())
         .then(data => {
