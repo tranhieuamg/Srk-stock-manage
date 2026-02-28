@@ -91,22 +91,43 @@
         }
 
         function onScanSuccess(decodedText) {
-            currentPartId = decodedText;
-            document.getElementById('item-id').innerText = "Code: " + decodedText;
-            document.getElementById('controls').style.display = 'block';
-            document.getElementById('reader').style.display = 'none'; // Hide camera to focus on form
-            
-            // Lookup Name via Google Script (GET request)
-            fetch(`${GOOGLE_SCRIPT_URL}?id=${decodedText}`)
-                .then(res => res.json())
-                .then(data => {
-                    currentPartName = data.found ? data.name : "New Item Detected";
-                    document.getElementById('item-name').innerText = currentPartName;
-                })
-                .catch(err => {
-                    document.getElementById('item-name').innerText = "Connection Error";
-                });
-        }
+    // Basic validation: Is it 6 digits?
+    if (decodedText.length !== 6) {
+        alert("Invalid QR: Must be a 6-digit code.");
+        return;
+    }
+
+    currentPartId = decodedText;
+    const nameDisplay = document.getElementById('item-name');
+    const controls = document.getElementById('controls');
+    
+    nameDisplay.innerText = "Verifying Code...";
+    nameDisplay.style.color = "orange";
+    controls.style.display = 'block';
+
+    // Fetch name from Google Sheet
+    fetch(`${GOOGLE_SCRIPT_URL}?id=${decodedText}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.found) {
+                currentPartName = data.name;
+                nameDisplay.innerText = "✅ " + currentPartName;
+                nameDisplay.style.color = "green";
+                // Enable buttons
+                document.querySelectorAll('.btn-group button').forEach(b => b.disabled = false);
+            } else {
+                currentPartName = null;
+                nameDisplay.innerText = "❌ " + data.error;
+                nameDisplay.style.color = "red";
+                // Disable buttons so they can't submit bad data
+                document.querySelectorAll('.btn-group button').forEach(b => b.disabled = true);
+            }
+        })
+        .catch(err => {
+            nameDisplay.innerText = "Connection Error";
+            nameDisplay.style.color = "red";
+        });
+}
 
         // 3. Database Submission Logic
         function submitData(action) {
