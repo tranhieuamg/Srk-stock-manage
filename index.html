@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Warehouse Stock Manager</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    
+    <style>
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; }
+        body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; background: #f4f7f6; }
+        
+        /* PIN Overlay Styling */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 1000; display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+        }
+
+        /* UI Elements */
+        #reader { width: 100%; max-width: 400px; margin: 20px auto; border-radius: 8px; overflow: hidden; }
+        .controls { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
+        input { width: 80%; padding: 15px; margin: 10px 0; font-size: 1.2rem; border: 1px solid #ddd; border-radius: 8px; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+        button { padding: 15px 25px; font-size: 1rem; font-weight: bold; cursor: pointer; color: white; border: none; border-radius: 8px; transition: 0.2s; }
+        .btn-add { background: var(--success); flex: 1; }
+        .btn-remove { background: var(--danger); flex: 1; }
+        .btn-unlock { background: var(--primary); width: 80%; }
+        
+        h2 { color: #333; }
+        #item-name { color: var(--primary); margin: 5px 0; }
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <h2>Staff Access Only</h2>
+        <p>Please enter the warehouse PIN</p>
+        <input type="password" id="pin-input" pattern="\d*" inputmode="numeric" placeholder="••••">
+        <button class="btn-unlock" onclick="checkPin()">Unlock System</button>
+    </div>
+
+    <div id="main-app" style="display:none;">
+        <h2>Scan Stock Item</h2>
+        <div id="reader"></div>
+        
+        <div id="controls" class="controls">
+            <h3 id="item-name">Searching...</h3>
+            <p id="item-id" style="color: #666; font-size: 0.9rem;"></p>
+            
+            <label for="qty">Quantity to Move:</label><br>
+            <input type="number" id="qty" value="1" min="1">
+            
+            <div class="btn-group">
+                <button class="btn-add" onclick="submitData('IN')">➕ ADD</button>
+                <button class="btn-remove" onclick="submitData('OUT')">➖ REMOVE</button>
+            </div>
+            <button onclick="location.reload()" style="background:#666; margin-top: 20px; width: 100%;">Cancel / Next Scan</button>
+        </div>
+    </div>
+
+    <script>
+        // ================= CONFIGURATION =================
+        const MY_M_K = "100110"; // SET YOUR PASSWORD HERE
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
+        // =================================================
+
+        let currentPartId = "";
+        let currentPartName = "";
+
+        // 1. PIN Check Logic
+        function checkPin() {
+            const input = document.getElementById('pin-input').value;
+            if (input === MY_M_K) {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                startScanner(); // Only start camera after login
+            } else {
+                alert("Incorrect PIN. Access Denied.");
+            }
+        }
+
+        // 2. Scanner Logic
+        function startScanner() {
+            const scanner = new Html5QrcodeScanner("reader", { 
+                fps: 10, 
+                qrbox: {width: 250, height: 250},
+                rememberLastUsedCamera: true
+            });
+            scanner.render(onScanSuccess);
+        }
+
+        function onScanSuccess(decodedText) {
+            currentPartId = decodedText;
+            document.getElementById('item-id').innerText = "Code: " + decodedText;
+            document.getElementById('controls').style.display = 'block';
+            document.getElementById('reader').style.display = 'none'; // Hide camera to focus on form
+            
+            // Lookup Name via Google Script (GET request)
+            fetch(`${GOOGLE_SCRIPT_URL}?id=${decodedText}`)
+                .then(res => res.json())
+                .then(data => {
+                    currentPartName = data.found ? data.name : "New Item Detected";
+                    document.getElementById('item-name').innerText = currentPartName;
+                })
+                .catch(err => {
+                    document.getElementById('item-name').innerText = "Connection Error";
+                });
+        }
+
+        // 3. Database Submission Logic
+        function submitData(action) {
+            const qty = document.getElementById('qty').value;
+            
+            // Visual feedback
+            const btnGroup = document.querySelector('.btn-group');
+            btnGroup.innerHTML = "<p>Sending to Sheets...</p>";
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors", // Required for Google Apps Script cross-domain
+                cache: "no-cache",
+                body: JSON.stringify({
+                    partId: currentPartId,
+                    partName: currentPartName,
+                    action: action,
+                    quantity: qty
+                })
+            })
+            .then(() => {
+                alert(`Successfully recorded ${qty} units ${action}`);
+                location.reload(); // Reset for next person
+            })
+            .catch(err => alert("Error saving data. check internet."));
+        }
+    </script>
+</body>
+</html>
