@@ -64,33 +64,38 @@
         const MY_M_K = "100110"; // SET YOUR PASSWORD HERE
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
         // =================================================
+let currentPartId = "";
+let currentPartName = "";
+let html5QrCode; // Global variable to store the scanner instance
 
-        let currentPartId = "";
-        let currentPartName = "";
+// 1. PIN Check Logic
+function checkPin() {
+    const input = document.getElementById('pin-input').value;
+    if (input === MY_M_K) {
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        startScanner(); 
+    } else {
+        alert("Incorrect PIN.");
+    }
+}
 
-        // 1. PIN Check Logic
-        function checkPin() {
-            const input = document.getElementById('pin-input').value;
-            if (input === MY_M_K) {
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('main-app').style.display = 'block';
-                startScanner(); // Only start camera after login
-            } else {
-                alert("Incorrect PIN. Access Denied.");
-            }
-        }
+// 2. Scanner Logic
+function startScanner() {
+    // We create a new instance each time so we can control it better
+    html5QrCode = new Html5Qrcode("reader");
+    
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-        // 2. Scanner Logic
-        function startScanner() {
-            const scanner = new Html5QrcodeScanner("reader", { 
-                fps: 10, 
-                qrbox: {width: 250, height: 250},
-                rememberLastUsedCamera: true
-            });
-            scanner.render(onScanSuccess);
-        }
+    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+}
 
-        function onScanSuccess(decodedText) {
+async function onScanSuccess(decodedText) {
+    // Check if it's 6 digits
+    if (decodedText.length !== 6) {
+        return; // Ignore scans that aren't 6 digits (keeps camera running)
+    }
+
     // A. STOP THE CAMERA IMMEDIATELY
     try {
         await html5QrCode.stop();
@@ -116,14 +121,13 @@
                 currentPartName = data.name;
                 nameDisplay.innerText = "✅ " + currentPartName;
                 nameDisplay.style.color = "green";
-                // Enable buttons
-                document.querySelectorAll('.btn-group button').forEach(b => b.disabled = false);
+                document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'block');
             } else {
                 currentPartName = null;
-                nameDisplay.innerText = "❌ " + data.error;
+                nameDisplay.innerText = "❌ ERROR: " + data.error;
                 nameDisplay.style.color = "red";
-                // Disable buttons so they can't submit bad data
-                document.querySelectorAll('.btn-group button').forEach(b => b.disabled = true);
+                // Hide submit buttons if item isn't real
+                document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'none');
             }
         })
         .catch(err => {
@@ -132,31 +136,25 @@
         });
 }
 
-        // 3. Database Submission Logic
-        function submitData(action) {
-            const qty = document.getElementById('qty').value;
-            
-            // Visual feedback
-            const btnGroup = document.querySelector('.btn-group');
-            btnGroup.innerHTML = "<p>Sending to Sheets...</p>";
-
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors", // Required for Google Apps Script cross-domain
-                cache: "no-cache",
-                body: JSON.stringify({
-                    partId: currentPartId,
-                    partName: currentPartName,
-                    action: action,
-                    quantity: qty
-                })
-            })
-            .then(() => {
-                alert(`Successfully recorded ${qty} units ${action}`);
-                location.reload(); // Reset for next person
-            })
-            .catch(err => alert("Error saving data. check internet."));
-        }
+// 3. Database Submission Logic
+function submitData(action) {
+    const qty = document.getElementById('qty').value;
+    
+    fetch(GOOGLE_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify({
+            partId: currentPartId,
+            partName: currentPartName,
+            action: action,
+            quantity: qty
+        })
+    })
+    .then(() => {
+        alert(`Recorded: ${currentPartName} (${action} ${qty})`);
+        location.reload(); // Refresh to clear state and restart PIN/Camera
+    });
+}
     </script>
 </body>
 </html>
