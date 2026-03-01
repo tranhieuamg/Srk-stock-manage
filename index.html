@@ -47,11 +47,11 @@
     
     <select id="staff-name">
         <option value="" disabled selected>Staff's name</option>
-        <option value="Alex">Hieu</option>
-        <option value="Jordan">Trung</option>
-        <option value="Sam">Cuong</option>
-        <option value="Taylor">Vinh</option>
-        <option value="Casey">???</option>
+        <option value="Hieu">Hieu</option>
+        <option value="Trung">Trung</option>
+        <option value="Cuong">Cuong</option>
+        <option value="Vinh">Vinh</option>
+        <option value="???">???</option>
     </select>
 
     <input type="password" id="pin-input" pattern="\d*" inputmode="numeric" placeholder="PIN Code">
@@ -59,12 +59,16 @@
 </div>
 
     <div id="main-app" style="display:none;">
+        <p onclick="logout()" style="color: grey; cursor: pointer; margin-top: 50px; font-size: 0.8rem; text-decoration: underline;">
+        Log out / Lock System
+        </p>
         <h2>Scan Stock Item</h2>
         <div id="reader"></div>
         
         <div id="controls" class="controls">
             <h3 id="item-name">Searching...</h3>
             <p id="item-id" style="color: #666; font-size: 0.9rem;"></p>
+            <p id="stock-display" style="font-weight: bold; font-size: 1.1rem; margin: 10px 0;"></p> ```
             
             <label for="qty">Quantity to Move:</label><br>
             <input type="number" id="qty" value="1" min="1">
@@ -137,30 +141,22 @@ function startScanner() {
     html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
 }
 
-async function onScanSuccess(decodedText) {
-    // Check if it's 6 digits
-    if (decodedText.length !== 6) {
-        return; // Ignore scans that aren't 6 digits (keeps camera running)
-    }
+function onScanSuccess(decodedText) {
+    if (decodedText.length !== 6) return;
 
-    // A. STOP THE CAMERA IMMEDIATELY
-    try {
-        await html5QrCode.stop();
-        document.getElementById('reader').style.display = 'none'; // Hide the black box
-    } catch (err) {
-        console.error("Failed to stop camera.", err);
-    }
+    html5QrCode.stop().then(() => {
+        document.getElementById('reader').style.display = 'none';
+    });
 
-    // B. PREPARE UI
     currentPartId = decodedText;
     const nameDisplay = document.getElementById('item-name');
+    const stockDisplay = document.getElementById('stock-display');
     const controls = document.getElementById('controls');
     
-    nameDisplay.innerText = "Checking Database...";
-    nameDisplay.style.color = "orange";
+    nameDisplay.innerText = "Checking...";
+    stockDisplay.innerText = ""; // Clear old stock
     controls.style.display = 'block';
 
-    // C. LOOKUP FROM GOOGLE SHEETS
     fetch(`${GOOGLE_SCRIPT_URL}?id=${decodedText}`)
         .then(res => res.json())
         .then(data => {
@@ -168,15 +164,18 @@ async function onScanSuccess(decodedText) {
                 currentPartName = data.name;
                 nameDisplay.innerText = "✅ " + currentPartName;
                 nameDisplay.style.color = "green";
+                
+                // DISPLAY THE LIVE STOCK
+                stockDisplay.innerText = "Current Stock: " + data.stock + " units";
+                stockDisplay.style.color = (data.stock <= 5) ? "red" : "black"; // Turn red if low
+                
                 document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'block');
             } else {
-                currentPartName = null;
                 nameDisplay.innerText = "❌ ERROR: " + data.error;
                 nameDisplay.style.color = "red";
-                // Hide submit buttons if item isn't real
+                stockDisplay.innerText = "";
                 document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'none');
             }
-        })
         .catch(err => {
             nameDisplay.innerText = "Connection Error";
             nameDisplay.style.color = "red";
