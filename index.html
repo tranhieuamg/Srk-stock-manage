@@ -24,6 +24,15 @@
             background: white; z-index: 1000; display: flex;
             flex-direction: column; justify-content: center; align-items: center;
         }
+        /* Purpose */
+        #purpose { 
+        width: 80%; 
+        padding: 12px; 
+        margin: 10px 0; 
+        border-radius: 8px; 
+        border: 1px solid #ddd; 
+        font-size: 1rem;
+        }
 
         /* UI Elements */
         #reader { width: 100%; max-width: 400px; margin: 20px auto; border-radius: 8px; overflow: hidden; }
@@ -73,6 +82,8 @@
             <label for="qty">Quantity to Move:</label><br>
             <input type="number" id="qty" value="1" min="1">
             
+            <label for="purpose">Purpose / Order #:</label><br>
+            <input type="text" id="purpose" placeholder="e.g. Prototyping, Testing, Order #123">
             <div class="btn-group">
                 <button class="btn-add" onclick="submitData('IN')">➕ ADD</button>
                 <button class="btn-remove" onclick="submitData('OUT')">➖ REMOVE</button>
@@ -86,7 +97,7 @@
         const MY_M_K = "100110"; // SET YOUR PASSWORD HERE
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
         // =================================================
-let currentPartId = "";
+        let currentPartId = "";
         let currentPartName = "";
         let html5QrCode; 
 
@@ -171,22 +182,29 @@ let currentPartId = "";
         }
 
         function submitData(action) {
-            const qty = document.getElementById('qty').value;
-            const staff = localStorage.getItem("warehouse_staff_name");
+    const qty = document.getElementById('qty').value;
+    const purpose = document.getElementById('purpose').value; // Capture purpose
+    const staff = localStorage.getItem("warehouse_staff_name");
 
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors",
-                body: JSON.stringify({
-                    partId: currentPartId,
-                    partName: currentPartName,
-                    action: action,
-                    quantity: qty,
-                    staffName: staff 
+    if (!purpose) {
+        alert("Please enter a purpose for this movement.");
+        return;
+    }
+
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({
+            partId: currentPartId,
+            partName: currentPartName,
+            action: action,
+            quantity: qty,
+            staffName: staff,
+            purpose: purpose // <--- New data field
                 })
             })
             .then(() => {
-                alert(`Recorded by ${staff}: ${currentPartName} (${action} ${qty})`);
+                alert(`Recorded by ${staff}: ${currentPartName} (${action} ${qty}) for ${purpose}`);
                 location.reload(); 
             })
             .catch(err => alert("Submission failed. Check connection."));
