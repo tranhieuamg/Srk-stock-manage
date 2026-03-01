@@ -68,17 +68,38 @@ let currentPartId = "";
 let currentPartName = "";
 let html5QrCode; // Global variable to store the scanner instance
 
-// 1. PIN Check Logic
+        // 1. PIN Check Logic
+        // --- NEW: Run this the moment the page loads ---
+window.onload = function() {
+    if (localStorage.getItem("warehouse_authenticated") === "true") {
+        // User already logged in previously, jump to app
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        startScanner();
+    }
+};
+
 function checkPin() {
     const input = document.getElementById('pin-input').value;
     if (input === MY_M_K) {
+        // SAVE the login state to the phone's memory
+        localStorage.setItem("warehouse_authenticated", "true");
+        
         document.getElementById('login-overlay').style.display = 'none';
         document.getElementById('main-app').style.display = 'block';
-        startScanner(); 
+        startScanner();
     } else {
         alert("Incorrect PIN.");
     }
 }
+
+// --- OPTIONAL: Add a logout function if you want a "Lock" button ---
+function logout() {
+    localStorage.removeItem("warehouse_authenticated");
+    location.reload();
+}
+        
+
 
 // 2. Scanner Logic
 function startScanner() {
