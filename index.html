@@ -175,10 +175,11 @@ function onScanSuccess(decodedText) {
                 nameDisplay.style.color = "red";
                 stockDisplay.innerText = "";
                 document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'none');
-            }
+            })
         .catch(err => {
             nameDisplay.innerText = "Connection Error";
             nameDisplay.style.color = "red";
+            console.error(err);
         });
 }
 
@@ -202,7 +203,8 @@ function submitData(action) {
     .then(() => {
         alert(`Recorded by ${staff}: ${currentPartName} (${action} ${qty})`);
         location.reload(); 
-    });
+    })
+    .catch(err => alert("Submission failed. Check connection."));
 }
     </script>
 </body>
