@@ -87,125 +87,111 @@
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
         // =================================================
 let currentPartId = "";
-let currentPartName = "";
-let html5QrCode; // Global variable to store the scanner instance
+        let currentPartName = "";
+        let html5QrCode; 
 
-        // 1. PIN Check Logic
-        // --- NEW: Run this the moment the page loads ---
-window.onload = function() {
-    if (localStorage.getItem("warehouse_authenticated") === "true") {
-        // User already logged in previously, jump to app
-        document.getElementById('login-overlay').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
-        startScanner();
-    }
-};
+        window.onload = function() {
+            if (localStorage.getItem("warehouse_authenticated") === "true") {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                startScanner();
+            }
+        };
 
-// --- Updated CheckPin to include Name ---
-function checkPin() {
-    const pin = document.getElementById('pin-input').value;
-    const name = document.getElementById('staff-name').value;
+        function checkPin() {
+            const pin = document.getElementById('pin-input').value;
+            const name = document.getElementById('staff-name').value;
 
-    if (!name) {
-        alert("Please select your name first.");
-        return;
-    }
+            if (!name) {
+                alert("Please select your name first.");
+                return;
+            }
 
-    if (pin === MY_M_K) {
-        localStorage.setItem("warehouse_authenticated", "true");
-        localStorage.setItem("warehouse_staff_name", name); // Save name locally
-        
-        document.getElementById('login-overlay').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
-        startScanner();
-    } else {
-        alert("Incorrect PIN.");
-    }
-}
-
-// --- OPTIONAL: Add a logout function if you want a "Lock" button ---
-function logout() {
-    localStorage.removeItem("warehouse_authenticated");
-    location.reload();
-}
-        
-
-
-// 2. Scanner Logic
-function startScanner() {
-    // We create a new instance each time so we can control it better
-    html5QrCode = new Html5Qrcode("reader");
-    
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
-}
-
-function onScanSuccess(decodedText) {
-    if (decodedText.length !== 6) return;
-
-    html5QrCode.stop().then(() => {
-        document.getElementById('reader').style.display = 'none';
-    });
-
-    currentPartId = decodedText;
-    const nameDisplay = document.getElementById('item-name');
-    const stockDisplay = document.getElementById('stock-display');
-    const controls = document.getElementById('controls');
-    
-    nameDisplay.innerText = "Checking...";
-    stockDisplay.innerText = ""; // Clear old stock
-    controls.style.display = 'block';
-
-    fetch(`${GOOGLE_SCRIPT_URL}?id=${decodedText}`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.found) {
-                currentPartName = data.name;
-                nameDisplay.innerText = "✅ " + currentPartName;
-                nameDisplay.style.color = "green";
-                
-                // DISPLAY THE LIVE STOCK
-                stockDisplay.innerText = "Current Stock: " + data.stock + " units";
-                stockDisplay.style.color = (data.stock <= 5) ? "red" : "black"; // Turn red if low
-                
-                document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'block');
+            if (pin === MY_M_K) {
+                localStorage.setItem("warehouse_authenticated", "true");
+                localStorage.setItem("warehouse_staff_name", name);
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                startScanner();
             } else {
-                nameDisplay.innerText = "❌ ERROR: " + data.error;
-                nameDisplay.style.color = "red";
-                stockDisplay.innerText = "";
-                document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'none');
+                alert("Incorrect PIN.");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("warehouse_authenticated");
+            localStorage.removeItem("warehouse_staff_name");
+            location.reload();
+        }
+
+        function startScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+        }
+
+        function onScanSuccess(decodedText) {
+            if (decodedText.length !== 6) return;
+
+            html5QrCode.stop().then(() => {
+                document.getElementById('reader').style.display = 'none';
+            });
+
+            currentPartId = decodedText;
+            const nameDisplay = document.getElementById('item-name');
+            const stockDisplay = document.getElementById('stock-display');
+            const controls = document.getElementById('controls');
+            
+            nameDisplay.innerText = "Checking...";
+            stockDisplay.innerText = ""; 
+            controls.style.display = 'block';
+
+            fetch(`${GOOGLE_SCRIPT_URL}?id=${decodedText}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.found) {
+                        currentPartName = data.name;
+                        nameDisplay.innerText = "✅ " + currentPartName;
+                        nameDisplay.style.color = "green";
+                        stockDisplay.innerText = "Current Stock: " + data.stock + " units";
+                        stockDisplay.style.color = (data.stock <= 5) ? "red" : "black";
+                        document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'block');
+                    } else {
+                        nameDisplay.innerText = "❌ ERROR: " + (data.error || "Not found");
+                        nameDisplay.style.color = "red";
+                        stockDisplay.innerText = "";
+                        document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'none');
+                    }
+                }) // Closed the .then() properly here
+                .catch(err => {
+                    nameDisplay.innerText = "Connection Error";
+                    nameDisplay.style.color = "red";
+                    console.error(err);
+                });
+        }
+
+        function submitData(action) {
+            const qty = document.getElementById('qty').value;
+            const staff = localStorage.getItem("warehouse_staff_name");
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({
+                    partId: currentPartId,
+                    partName: currentPartName,
+                    action: action,
+                    quantity: qty,
+                    staffName: staff 
+                })
             })
-        .catch(err => {
-            nameDisplay.innerText = "Connection Error";
-            nameDisplay.style.color = "red";
-            console.error(err);
-        });
-}
-
-// 3. Database Submission Logic
-// --- Updated SubmitData to send the Name ---
-function submitData(action) {
-    const qty = document.getElementById('qty').value;
-    const staff = localStorage.getItem("warehouse_staff_name"); // Retrieve saved name
-
-    fetch(GOOGLE_SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        body: JSON.stringify({
-            partId: currentPartId,
-            partName: currentPartName,
-            action: action,
-            quantity: qty,
-            staffName: staff // <--- New data field
-        })
-    })
-    .then(() => {
-        alert(`Recorded by ${staff}: ${currentPartName} (${action} ${qty})`);
-        location.reload(); 
-    })
-    .catch(err => alert("Submission failed. Check connection."));
-}
+            .then(() => {
+                alert(`Recorded by ${staff}: ${currentPartName} (${action} ${qty})`);
+                location.reload(); 
+            })
+            .catch(err => alert("Submission failed. Check connection."));
+        }
+    </script>
     </script>
 </body>
 </html>
