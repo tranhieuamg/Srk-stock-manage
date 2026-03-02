@@ -18,6 +18,20 @@
         border: 1px solid #ccc;
         background: white;
                 }
+        /* Logo display */
+        .logo-container {
+        width: 100%;
+        text-align: center;
+        padding: 10px 0;
+        background: #f4f7f6; /* Matches the body background */
+        }
+
+        .app-logo {
+        max-width: 180px; /* Adjust this to make the logo larger or smaller */
+        height: auto;
+        display: block;
+        margin: 0 auto;
+        }
         /* PIN Overlay Styling */
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -51,7 +65,10 @@
 <body>
 
 <div id="login-overlay">
-    <h2>Stock Access</h2>
+    <div class="logo-container">
+        <img src="logo.png" alt="Company Logo" class="app-logo">
+    </div>
+    <h2>Stock Manage</h2>
     <p>Select your name and enter PIN</p>
     
     <select id="staff-name">
@@ -64,12 +81,12 @@
     </select>
 
     <input type="password" id="pin-input" pattern="\d*" inputmode="numeric" placeholder="PIN Code">
-    <button class="btn-unlock" onclick="checkPin()">Unlock System</button>
+    <button class="btn-unlock" onclick="checkPin()">Log in</button>
 </div>
 
     <div id="main-app" style="display:none;">
         <p onclick="logout()" style="color: grey; cursor: pointer; margin-top: 50px; font-size: 0.8rem; text-decoration: underline;">
-        Log out / Lock System
+        Log out
         </p>
         <h2>Scan Stock Item</h2>
         <div id="reader"></div>
