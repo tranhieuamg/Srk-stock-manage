@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -9,51 +9,17 @@
     <style>
         :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; }
         body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; background: #f4f7f6; }
-        select {
-        width: 80%;
-        padding: 15px;
-        margin: 10px 0;
-        font-size: 1.1rem;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        background: white;
-                }
+        select { width: 80%; padding: 15px; margin: 10px 0; font-size: 1.1rem; border-radius: 8px; border: 1px solid #ccc; background: white; }
 
-        /* Manual login */
         #manual-entry-section { display: none; margin-top: 20px; }
         .btn-toggle { background: #6c757d; width: 80%; margin-top: 10px; }
         
-        /* Logo display */
-        .logo-container {
-        width: 100%;
-        text-align: center;
-        padding: 10px 0;
-        background: #f4f7f6; /* Matches the body background */
-        }
+        .logo-container { width: 100%; text-align: center; padding: 10px 0; background: #f4f7f6; }
+        .app-logo { max-width: 180px; height: auto; display: block; margin: 0 auto; }
 
-        .app-logo {
-        max-width: 180px; /* Adjust this to make the logo larger or smaller */
-        height: auto;
-        display: block;
-        margin: 0 auto;
-        }
-        /* PIN Overlay Styling */
-        #login-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 1000; display: flex;
-            flex-direction: column; justify-content: center; align-items: center;
-        }
-        /* Purpose */
-        #purpose { 
-        width: 80%; 
-        padding: 12px; 
-        margin: 10px 0; 
-        border-radius: 8px; 
-        border: 1px solid #ddd; 
-        font-size: 1rem;
-        }
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #purpose { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; font-size: 1rem; }
 
-        /* UI Elements */
         #reader { width: 100%; max-width: 400px; margin: 20px auto; border-radius: 8px; overflow: hidden; }
         .controls { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
         input { width: 80%; padding: 15px; margin: 10px 0; font-size: 1.2rem; border: 1px solid #ddd; border-radius: 8px; }
@@ -82,20 +48,19 @@
         <option value="Trung">Trung</option>
         <option value="Cuong">Cuong</option>
         <option value="Vinh">Vinh</option>
-        <option value="???">???</option>
     </select>
 
     <input type="password" id="pin-input" pattern="\d*" inputmode="numeric" placeholder="PIN Code">
     <button class="btn-unlock" onclick="checkPin()">Log in</button>
 </div>
 
-    <div id="main-app" style="display:none;">
-        <p onclick="logout()" style="color: grey; cursor: pointer; margin-top: 50px; font-size: 0.8rem; text-decoration: underline;">
-        Log out
-        </p>
+<div id="main-app" style="display:none;">
+    <p onclick="logout()" style="color: grey; cursor: pointer; margin-top: 50px; font-size: 0.8rem; text-decoration: underline;">
+    Log out
+    </p>
+    
+    <div id="scanner-view">
         <h2>Scan Stock Item</h2>
-
-        <div id="scanner-view">
         <div id="reader"></div>
         <button class="btn-toggle" onclick="showManual()">⌨️ Type Code Manually</button>
     </div>
@@ -106,179 +71,164 @@
         <button class="btn-unlock" onclick="handleManualSubmit()">Lookup Part</button>
         <button class="btn-toggle" onclick="showScanner()">📷 Switch to Camera</button>
     </div>
-        <div id="reader"></div>
+    
+    <div id="controls" class="controls">
+        <h3 id="item-name">Searching...</h3>
+        <p id="item-id" style="color: #666; font-size: 0.9rem;"></p>
+        <p id="stock-display" style="font-weight: bold; font-size: 1.1rem; margin: 10px 0;"></p>
         
-        <div id="controls" class="controls">
-            <h3 id="item-name">Searching...</h3>
-            <p id="item-id" style="color: #666; font-size: 0.9rem;"></p>
-            <p id="stock-display" style="font-weight: bold; font-size: 1.1rem; margin: 10px 0;"></p> ```
-            
-            <label for="qty">Quantity to Move:</label><br>
-            <input type="number" id="qty" value="1" min="1">
-            
-            <label for="purpose">Purpose / Order #:</label><br>
-            <input type="text" id="purpose" placeholder="e.g. Prototyping, Testing, Order #123">
-            <div class="btn-group">
-                <button class="btn-add" onclick="submitData('IN')">➕ ADD</button>
-                <button class="btn-remove" onclick="submitData('OUT')">➖ REMOVE</button>
-            </div>
-            <button onclick="location.reload()" style="background:#666; margin-top: 20px; width: 100%;">Cancel / Next Scan</button>
+        <label for="qty">Quantity to Move:</label><br>
+        <input type="number" id="qty" value="1" min="1">
+        
+        <label for="purpose">Purpose / Order #:</label><br>
+        <input type="text" id="purpose" placeholder="e.g. Prototyping, Testing, Order #123">
+        
+        <div class="btn-group">
+            <button class="btn-add" onclick="submitData('IN')">➕ ADD</button>
+            <button class="btn-remove" onclick="submitData('OUT')">➖ REMOVE</button>
         </div>
+        <button onclick="location.reload()" style="background:#666; margin-top: 20px; width: 100%;">Cancel / Next Scan</button>
     </div>
+</div>
 
-    <script>
-        // ================= CONFIGURATION =================
-        const MY_M_K = "100110"; // SET YOUR PASSWORD HERE
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
-        // =================================================
-        let currentPartId = "";
-        let currentPartName = "";
-        let html5QrCode; 
+<script>
+    const MY_M_K = "100110"; 
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
 
-        window.onload = function() {
-            if (localStorage.getItem("warehouse_authenticated") === "true") {
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('main-app').style.display = 'block';
-                startScanner();
-            }
-        };
+    let currentPartId = "";
+    let currentPartName = "";
+    let html5QrCode; 
 
-        function checkPin() {
-            const pin = document.getElementById('pin-input').value;
-            const name = document.getElementById('staff-name').value;
-
-            if (!name) {
-                alert("Please select your name first.");
-                return;
-            }
-
-            if (pin === MY_M_K) {
-                localStorage.setItem("warehouse_authenticated", "true");
-                localStorage.setItem("warehouse_staff_name", name);
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('main-app').style.display = 'block';
-                startScanner();
-            } else {
-                alert("Incorrect PIN.");
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem("warehouse_authenticated");
-            localStorage.removeItem("warehouse_staff_name");
-            location.reload();
-        }
-
-        function startScanner() {
-            html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
-        }
-        
-        // Toggle to Manual View
-        function showManual() {
-            if (html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    document.getElementById('scanner-view').style.display = 'none';
-                    document.getElementById('manual-entry-section').style.display = 'block';
-                });
-            } else {
-                document.getElementById('scanner-view').style.display = 'none';
-                document.getElementById('manual-entry-section').style.display = 'block';
-            }
-        }
-
-        // Toggle back to Scanner View
-        function showScanner() {
-            document.getElementById('manual-entry-section').style.display = 'none';
-            document.getElementById('scanner-view').style.display = 'block';
+    window.onload = function() {
+        if (localStorage.getItem("warehouse_authenticated") === "true") {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
             startScanner();
         }
+    };
 
-        // Handle the manual button click
-        function handleManualSubmit() {
-            const code = document.getElementById('manual-code-input').value;
-    
-            if (code.length !== 6) {
-                alert("Please enter a valid 6-digit code.");
-                return;
-            }
+    function checkPin() {
+        const pin = document.getElementById('pin-input').value;
+        const name = document.getElementById('staff-name').value;
+        if (!name) { alert("Please select your name first."); return; }
+        if (pin === MY_M_K) {
+            localStorage.setItem("warehouse_authenticated", "true");
+            localStorage.setItem("warehouse_staff_name", name);
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            startScanner();
+        } else { alert("Incorrect PIN."); }
+    }
 
-            // Hide the manual input section
-            document.getElementById('manual-entry-section').style.display = 'none';
-    
-            // Trigger the existing lookup logic (reusing onScanSuccess)
-            onScanSuccess(code);
+    function logout() {
+        localStorage.removeItem("warehouse_authenticated");
+        localStorage.removeItem("warehouse_staff_name");
+        location.reload();
+    }
+
+    function startScanner() {
+        html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess).catch(err => console.error(err));
+    }
+
+    function showManual() {
+        const scannerView = document.getElementById('scanner-view');
+        const manualView = document.getElementById('manual-entry-section');
+        
+        // Safety: Check if scanning before trying to stop
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                scannerView.style.display = 'none';
+                manualView.style.display = 'block';
+            });
+        } else {
+            scannerView.style.display = 'none';
+            manualView.style.display = 'block';
         }
-        function onScanSuccess(decodedText) {
-            if (decodedText.length !== 6) return;
+    }
 
+    function showScanner() {
+        document.getElementById('manual-entry-section').style.display = 'none';
+        document.getElementById('scanner-view').style.display = 'block';
+        startScanner();
+    }
+
+    function handleManualSubmit() {
+        const code = document.getElementById('manual-code-input').value;
+        if (code.length !== 6) { alert("Please enter a valid 6-digit code."); return; }
+        document.getElementById('manual-entry-section').style.display = 'none';
+        onScanSuccess(code);
+    }
+
+    function onScanSuccess(decodedText) {
+        if (decodedText.length !== 6) return;
+
+        // Try to stop camera if it's running
+        if (html5QrCode && html5QrCode.isScanning) {
             html5QrCode.stop().then(() => {
                 document.getElementById('reader').style.display = 'none';
             });
-
-            currentPartId = decodedText;
-            const nameDisplay = document.getElementById('item-name');
-            const stockDisplay = document.getElementById('stock-display');
-            const controls = document.getElementById('controls');
-            
-            nameDisplay.innerText = "Checking...";
-            stockDisplay.innerText = ""; 
-            controls.style.display = 'block';
-
-            fetch(`${GOOGLE_SCRIPT_URL}?id=${decodedText}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.found) {
-                        currentPartName = data.name;
-                        nameDisplay.innerText = "✅ " + currentPartName;
-                        nameDisplay.style.color = "green";
-                        stockDisplay.innerText = "Current Stock: " + data.stock + " units";
-                        stockDisplay.style.color = (data.stock <= 5) ? "red" : "black";
-                        document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'block');
-                    } else {
-                        nameDisplay.innerText = "❌ ERROR: " + (data.error || "Not found");
-                        nameDisplay.style.color = "red";
-                        stockDisplay.innerText = "";
-                        document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'none');
-                    }
-                }) // Closed the .then() properly here
-                .catch(err => {
-                    nameDisplay.innerText = "Connection Error";
-                    nameDisplay.style.color = "red";
-                    console.error(err);
-                });
         }
 
-        function submitData(action) {
-    const qty = document.getElementById('qty').value;
-    const purpose = document.getElementById('purpose').value; // Capture purpose
-    const staff = localStorage.getItem("warehouse_staff_name");
+        currentPartId = decodedText;
+        const nameDisplay = document.getElementById('item-name');
+        const stockDisplay = document.getElementById('stock-display');
+        const controls = document.getElementById('controls');
+        
+        nameDisplay.innerText = "Checking...";
+        nameDisplay.style.color = "orange";
+        stockDisplay.innerText = ""; 
+        controls.style.display = 'block';
+        document.getElementById('scanner-view').style.display = 'none';
 
-    if (!purpose) {
-        alert("Please enter a purpose for this movement.");
-        return;
+        fetch(`${GOOGLE_SCRIPT_URL}?id=${decodedText}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.found) {
+                    currentPartName = data.name;
+                    nameDisplay.innerText = "✅ " + currentPartName;
+                    nameDisplay.style.color = "green";
+                    stockDisplay.innerText = "Current Stock: " + data.stock + " units";
+                    stockDisplay.style.color = (data.stock <= 5) ? "red" : "black";
+                    document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'block');
+                } else {
+                    nameDisplay.innerText = "❌ ERROR: " + (data.error || "Not found");
+                    nameDisplay.style.color = "red";
+                    document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'none');
+                }
+            })
+            .catch(err => {
+                nameDisplay.innerText = "Connection Error";
+                nameDisplay.style.color = "red";
+            });
     }
+
+    function submitData(action) {
+        const qty = document.getElementById('qty').value;
+        const purpose = document.getElementById('purpose').value;
+        const staff = localStorage.getItem("warehouse_staff_name");
+
+        if (!purpose) { alert("Please enter a purpose."); return; }
 
         fetch(GOOGLE_SCRIPT_URL, {
             method: "POST",
             mode: "no-cors",
             body: JSON.stringify({
-            partId: currentPartId,
-            partName: currentPartName,
-            action: action,
-            quantity: qty,
-            staffName: staff,
-            purpose: purpose // <--- New data field
-                })
+                partId: currentPartId,
+                partName: currentPartName,
+                action: action,
+                quantity: qty,
+                staffName: staff,
+                purpose: purpose
             })
-            .then(() => {
-                alert(`Recorded by ${staff}: ${currentPartName} (${action} ${qty}) for ${purpose}`);
-                location.reload(); 
-            })
-            .catch(err => alert("Submission failed. Check connection."));
-        }
-    </script>
-    </script>
+        })
+        .then(() => {
+            alert(`Recorded: ${currentPartName} (${action} ${qty})`);
+            location.reload(); 
+        })
+        .catch(err => alert("Submission failed."));
+    }
+</script>
 </body>
 </html>
