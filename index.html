@@ -62,14 +62,14 @@
     <div id="scanner-view">
         <h2>Scan Stock Item</h2>
         <div id="reader"></div>
-        <button class="btn-toggle" onclick="showManual()">⌨️ Type Code Manually</button>
+        <button class="btn-toggle" onclick="showManual()">⌨️ Type Code </button>
     </div>
 
     <div id="manual-entry-section">
         <h3>Enter 6-Digit Code</h3>
         <input type="number" id="manual-code-input" pattern="\d*" inputmode="numeric" placeholder="e.g. 123456">
-        <button class="btn-unlock" onclick="handleManualSubmit()">Lookup Part</button>
-        <button class="btn-toggle" onclick="showScanner()">📷 Switch to Camera</button>
+        <button class="btn-unlock" onclick="handleManualSubmit()">Check Part</button>
+        <button class="btn-toggle" onclick="showScanner()">📷 Use Camera</button>
     </div>
     
     <div id="controls" class="controls">
