@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -18,6 +18,11 @@
         border: 1px solid #ccc;
         background: white;
                 }
+
+        /* Manual login */
+        #manual-entry-section { display: none; margin-top: 20px; }
+        .btn-toggle { background: #6c757d; width: 80%; margin-top: 10px; }
+        
         /* Logo display */
         .logo-container {
         width: 100%;
@@ -89,6 +94,18 @@
         Log out
         </p>
         <h2>Scan Stock Item</h2>
+
+        <div id="scanner-view">
+        <div id="reader"></div>
+        <button class="btn-toggle" onclick="showManual()">⌨️ Type Code Manually</button>
+    </div>
+
+    <div id="manual-entry-section">
+        <h3>Enter 6-Digit Code</h3>
+        <input type="number" id="manual-code-input" pattern="\d*" inputmode="numeric" placeholder="e.g. 123456">
+        <button class="btn-unlock" onclick="handleManualSubmit()">Lookup Part</button>
+        <button class="btn-toggle" onclick="showScanner()">📷 Switch to Camera</button>
+    </div>
         <div id="reader"></div>
         
         <div id="controls" class="controls">
@@ -157,7 +174,42 @@
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
         }
+        
+        // Toggle to Manual View
+        function showManual() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('scanner-view').style.display = 'none';
+                    document.getElementById('manual-entry-section').style.display = 'block';
+                });
+            } else {
+                document.getElementById('scanner-view').style.display = 'none';
+                document.getElementById('manual-entry-section').style.display = 'block';
+            }
+        }
 
+        // Toggle back to Scanner View
+        function showScanner() {
+            document.getElementById('manual-entry-section').style.display = 'none';
+            document.getElementById('scanner-view').style.display = 'block';
+            startScanner();
+        }
+
+        // Handle the manual button click
+        function handleManualSubmit() {
+            const code = document.getElementById('manual-code-input').value;
+    
+            if (code.length !== 6) {
+                alert("Please enter a valid 6-digit code.");
+                return;
+            }
+
+            // Hide the manual input section
+            document.getElementById('manual-entry-section').style.display = 'none';
+    
+            // Trigger the existing lookup logic (reusing onScanSuccess)
+            onScanSuccess(code);
+        }
         function onScanSuccess(decodedText) {
             if (decodedText.length !== 6) return;
 
