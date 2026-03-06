@@ -88,11 +88,14 @@
             <h3 id="item-name">Checking...</h3>
             <p id="item-id" style="color: #666; font-size: 0.8rem;"></p>
             <p id="stock-display" style="font-weight: bold; font-size: 1.2rem;"></p>
-            
+    
             <hr>
             <label><strong>Quantity:</strong></label><br>
             <input type="number" id="qty" value="1" min="1">
-            
+    
+            <label><strong>Purpose:</strong></label><br>
+            <input type="text" id="manual-purpose" placeholder="e.g. Prototyping, Testing, Internal Use">
+
             <label><strong>Link to Order (6-digit):</strong></label><br>
             <input type="number" id="purpose-order" placeholder="Enter Order Code">
             <button type="button" class="btn-toggle" style="width:60%; font-size:0.8rem;" onclick="verifyOrderForStock()">Verify Order</button>
@@ -104,7 +107,6 @@
             </div>
             <button onclick="location.reload()" style="background:#666; margin-top: 20px; width: 100%;">Cancel / Next Scan</button>
         </div>
-    </div>
 
     <div id="order-page" style="display:none;">
         <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Dashboard</button>
@@ -280,19 +282,28 @@
     }
 
     function submitData(action) {
-        if (!isOrderValid) { alert("Please verify an active order code first."); return; }
-        const payload = {
-            type: "STOCK_MOVE",
-            partId: currentPartId,
-            partName: currentPartName,
-            action: action,
-            quantity: document.getElementById('qty').value,
-            staffName: localStorage.getItem("warehouse_staff_name"),
-            purpose: document.getElementById('purpose-order').value
-        };
-        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
-            .then(() => { alert("Stock Update Successful!"); location.reload(); });
-    }
+            if (!isOrderValid) { 
+                alert("Please verify an active order code first."); 
+                return; 
+            }
+    
+            const payload = {
+                type: "STOCK_MOVE",
+                partId: currentPartId,
+                partName: currentPartName,
+                action: action,
+                quantity: document.getElementById('qty').value,
+                staffName: localStorage.getItem("warehouse_staff_name"),
+                purpose: document.getElementById('manual-purpose').value, // Captured Purpose
+                orderCode: document.getElementById('purpose-order').value // Captured Order Code
+            };
+
+            fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+                .then(() => { 
+                    alert(`Success! Recorded for Order ${payload.orderCode}`); 
+                    location.reload(); 
+                });
+        }
 
     // --- ORDER MANAGEMENT LOGIC ---
     function submitNewOrder() {
