@@ -107,28 +107,26 @@
                 <h4 id="form-title">Moving Stock</h4>
                 <label>Quantity:</label>
                 <input type="number" id="qty" value="1" min="1">
+    
                 <label>Purpose:</label>
                 <input type="text" id="manual-purpose" placeholder="Notes (Internal)">
-                <div id="order-link-section" style="display:none;">
-                    <label>Reason for Removal:</label>
-                    <select id="removal-reason" onchange="handleReasonChange()">
-                        <option value="" disabled selected>Select reason...</option>
-                        <option value="For Testing">For Testing</option>
-                        <option value="For Post Processing">For Post Processing</option>
-                        <option value="For Making an Order">For Making an Order</option>
-                    </select>
-                    <div id="order-code-input-block" style="display:none;">
-                        <label>Order Code:</label>
-                        <input type="number" id="purpose-order" placeholder="Enter 6-digit Code">
-                        <button type="button" class="btn-toggle" onclick="verifyOrderForStock()">Verify Order</button>
-                        <p id="order-verify-msg" class="status-msg"></p>
 
-                        <div class="checkbox-container">
-                            <input type="checkbox" id="wasted-check">
-                            <label for="wasted-check" style="margin:0; color:var(--danger);">Part Wasted during assembly?</label>
-                        </div>>
+                <div id="po-link-section" style="display:none;">
+                    <label><strong>PO / Contract / Tracking:</strong></label>
+                    <div class="btn-group-inline" style="margin-bottom:10px;">
+                        <button type="button" class="btn-toggle" style="font-size:0.7rem; padding:8px;" onclick="setPOChoice('none')">None</button>
+                        <button type="button" class="btn-toggle" style="font-size:0.7rem; padding:8px;" onclick="setPOChoice('search')">Search</button>
+                        <button type="button" class="btn-toggle" style="font-size:0.7rem; padding:8px;" onclick="setPOChoice('new')">Create New</button>
+                    </div>
+
+                    <div id="po-input-block" style="display:none;">
+                        <input type="text" id="po-number-input" placeholder="Enter PO or Tracking #">
+                        <button id="po-verify-btn" type="button" class="btn-unlock" style="background:var(--purple); display:none;" onclick="verifyPO()">Verify PO</button>
+                        <p id="po-msg" class="status-msg"></p>
                     </div>
                 </div>
+
+                <hr>
                 <button id="final-submit-btn" class="btn-unlock" onclick="submitFinalData()">Confirm Transaction</button>
             </div>
             <button class="btn-cancel" onclick="location.reload()">Cancel / Next</button>
@@ -236,49 +234,94 @@
         });
     }
 
-    function submitFinalData() {
-        const qty = Number(document.getElementById('qty').value);
-        const wastedCheckbox = document.getElementById('wasted-check');
-    
-        if (currentAction === 'OUT') {
-            if (qty > currentStockValue) { alert("Insufficient stock!"); return; }
-            if (!isOrderValid) { alert("Verify order or reason first!"); return; }
-        }
+    let poChoice = ""; // tracks 'none', 'search', or 'new'
+let isPOValid = false; 
 
-        const btn = document.getElementById('final-submit-btn');
-        btn.disabled = true; btn.innerText = "⏳ Recording...";
+function setPOChoice(choice) {
+    poChoice = choice;
+    const inputBlock = document.getElementById('po-input-block');
+    const verifyBtn = document.getElementById('po-verify-btn');
+    const msg = document.getElementById('po-msg');
+    const inputField = document.getElementById('po-number-input');
 
-        let link = "";
-        let wastedStatus = ""; // Default empty
+    inputBlock.style.display = (choice === 'none') ? 'none' : 'block';
+    verifyBtn.style.display = (choice === 'search') ? 'block' : 'none';
+    msg.innerText = "";
+    inputField.value = "";
 
-        if (currentAction === 'OUT') {
-            const r = document.getElementById('removal-reason').value;
-            link = (r === "For Making an Order") ? document.getElementById('purpose-order').value : r;
-        
-            // Record "Yes" if checked, otherwise leave blank or "No"
-            if (r === "For Making an Order" && wastedCheckbox.checked) {
-            wastedStatus = "Yes";
-            }
-        }
-
-        const payload = {
-            type: "STOCK_MOVE",
-            partId: currentPartId,
-            partName: currentPartName,
-            action: currentAction,
-            quantity: qty,
-            staffName: localStorage.getItem("warehouse_staff_name"),
-            purpose: document.getElementById('manual-purpose').value,
-            orderCode: link,
-            wasted: wastedStatus // NEW: Sending the Wasted status to Column J
-        };
-
-        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
-            .then(() => { 
-                alert("Data Recorded!"); 
-                location.reload(); 
-            });
+    if (choice === 'none') {
+        isPOValid = true; 
+        msg.innerText = "✅ N/A will be recorded.";
+        msg.style.color = "green";
+    } else {
+        isPOValid = (choice === 'new'); // 'new' is valid immediately if filled
     }
+}
+
+function verifyPO() {
+    const po = document.getElementById('po-number-input').value;
+    if (!po) return;
+    
+    fetch(`${GOOGLE_SCRIPT_URL}?mode=po_search&id=${po}`)
+        .then(res => res.json())
+        .then(data => {
+            const msg = document.getElementById('po-msg');
+            if (data.found) {
+                msg.innerText = "✅ PO Found and Linked.";
+                msg.style.color = "green";
+                isPOValid = true;
+            } else {
+                msg.innerText = "❌ Not found. Please choose 'Create New'.";
+                msg.style.color = "red";
+                isPOValid = false;
+            }
+        });
+}
+
+function submitFinalData() {
+    const qty = Number(document.getElementById('qty').value);
+    const poInput = document.getElementById('po-number-input').value;
+
+    // VALIDATION
+    if (currentAction === 'IN') {
+        if (poChoice === 'new' && !poInput) { alert("Please enter a new PO/Tracking number."); return; }
+        if (!isPOValid) { alert("Please verify the PO number first."); return; }
+    } else if (currentAction === 'OUT') {
+        if (qty > currentStockValue) { alert("Insufficient stock!"); return; }
+        if (!isOrderValid) { alert("Verify order/reason first!"); return; }
+    }
+
+    const btn = document.getElementById('final-submit-btn');
+    btn.disabled = true; btn.innerText = "⏳ Recording...";
+
+    // Determine values for Column I and Column H
+    let poFinalValue = "N/A";
+    if (currentAction === 'IN') {
+        if (poChoice !== 'none') poFinalValue = poInput;
+    }
+
+    let orderFinalValue = "";
+    if (currentAction === 'OUT') {
+        const r = document.getElementById('removal-reason').value;
+        orderFinalValue = (r === "For Making an Order") ? document.getElementById('purpose-order').value : r;
+    }
+
+    const payload = {
+        type: "STOCK_MOVE",
+        partId: currentPartId,
+        partName: currentPartName,
+        action: currentAction,
+        quantity: qty,
+        staffName: localStorage.getItem("warehouse_staff_name"),
+        purpose: document.getElementById('manual-purpose').value,
+        orderCode: orderFinalValue, // Column H
+        poValue: poFinalValue,      // Column I
+        wasted: (currentAction === 'OUT' && document.getElementById('wasted-check').checked) ? "Yes" : "" // Column J
+    };
+
+    fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+        .then(() => { alert("Data Submitted"); location.reload(); });
+}
 
     function submitNewOrder() {
         const customer = document.getElementById('cust-name').value;
