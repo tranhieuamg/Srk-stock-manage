@@ -30,6 +30,14 @@
         .btn-order { background: var(--purple); width: 90%; }
         .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
 
+        /* Styling for any disabled button */
+        button:disabled {
+        background-color: #cccccc !important;
+        color: #666666 !important;
+        cursor: not-allowed;
+        opacity: 0.7;
+        }
+        
         /* Scanner */
         #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 8px; overflow: hidden; background: #000; }
         #controls { display: none; }
@@ -344,18 +352,18 @@
         }
 
         function submitFinalData() {
-            // 1. Validation for Removal
+            // 1. Validation check
             if (currentAction === 'OUT' && !isOrderValid) {
                 alert("For removal, you must verify a valid Order Code first.");
                 return;
             }
 
+            const submitBtn = document.getElementById('final-submit-btn');
             const qty = document.getElementById('qty').value;
-            const purpose = document.getElementById('manual-purpose').value;
-            const orderCode = document.getElementById('purpose-order').value;
-            const staff = localStorage.getItem("warehouse_staff_name");
-
-            if (!qty || qty <= 0) { alert("Please enter a valid quantity."); return; }
+        
+            // 2. LOCK THE BUTTON IMMEDIATELY
+            submitBtn.disabled = true;
+            submitBtn.innerText = "⏳ Saving to Sheet...";
 
             const payload = {
                 type: "STOCK_MOVE",
@@ -363,61 +371,60 @@
                 partName: currentPartName,
                 action: currentAction,
                 quantity: qty,
-                staffName: staff,
-                purpose: purpose,
-                orderCode: currentAction === 'IN' ? "" : orderCode // Send blank if it's an IN move
+                staffName: localStorage.getItem("warehouse_staff_name"),
+                purpose: document.getElementById('manual-purpose').value,
+                orderCode: currentAction === 'IN' ? "" : document.getElementById('purpose-order').value
             };
 
             fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
                 .then(() => {
-                    alert(`Stock ${currentAction === 'IN' ? 'Added' : 'Removed'} Successfully!`);
-                    location.reload();
+                    alert("Success! Data recorded.");
+                    location.reload(); // This clears the lock by refreshing the page
                 })
-                .catch(err => alert("Error: Data not saved."));
+                .catch(err => {
+                    // 3. RE-ENABLE ONLY ON ERROR
+                    alert("Error: Data not saved. Try again.");
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "Confirm Submission";
+                });
         }
 
     // --- ORDER MANAGEMENT LOGIC ---
     function submitNewOrder() {
-        // 1. Capture the values from the inputs
-        const customer = document.getElementById('cust-name').value;
-        const product = document.getElementById('order-prod').value;
-        const details = document.getElementById('order-details').value;
-        const contract = document.getElementById('order-contract').value;
-        const deadline = document.getElementById('order-deadline').value;
+            const submitBtn = event.target; // Gets the button that was clicked
+            const customer = document.getElementById('cust-name').value;
+            const product = document.getElementById('order-prod').value;
 
-        // 2. Check if basic info is missing
-        if (!customer || !product) {
-            alert("Please enter at least the Customer Name and Product.");
-            return;
+            if (!customer || !product) {
+                alert("Please fill in Customer and Product.");
+                return;
+            }
+
+            // LOCK THE BUTTON
+            submitBtn.disabled = true;
+            submitBtn.innerText = "⏳ Creating Order...";
+
+            const payload = {
+                type: "NEW_ORDER",
+                customer: customer,
+                product: product,
+                details: document.getElementById('order-details').value,
+                contract: document.getElementById('order-contract').value,
+                deadline: document.getElementById('order-deadline').value
+            };
+
+            fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+                .then(res => res.json())
+                .then(data => { 
+                    alert(`Order for [${customer}] added!\nCODE: ${data.code}`); 
+                    location.reload(); 
+                })
+                .catch(err => {
+                    alert("Error creating order.");
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "⏳ Create Order";
+                });
         }
-
-        const payload = {
-            type: "NEW_ORDER",
-            customer: customer,
-            product: product,
-            details: details,
-            contract: contract,
-            deadline: deadline
-        };
-
-        // 3. Send the data
-        fetch(GOOGLE_SCRIPT_URL, { 
-            method: "POST", 
-            body: JSON.stringify(payload) 
-        })
-        .then(res => res.json())
-        .then(data => { 
-            // 4. Show the detailed notification using the variables we captured
-            alert(`Order by customer [${customer}] for the product [${product}] has been added.\n\nORDER CODE: ${data.code}`); 
-        
-            // 5. Reload the page after the user clicks "OK"
-            location.reload(); 
-        })
-        .catch(err => {
-            alert("Error: Could not upload order. Please check your internet connection.");
-            console.error(err);
-        });
-    }
 
     function findOrderForEdit() {
         const id = document.getElementById('search-order-id').value;
