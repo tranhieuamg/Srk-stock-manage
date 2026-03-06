@@ -23,7 +23,21 @@
         
         button { padding: 15px; font-size: 1rem; font-weight: bold; cursor: pointer; color: white; border: none; border-radius: 8px; transition: 0.2s; display: block; margin: 10px auto; width: 95%; max-width: 400px; }
         button:disabled { background-color: #cccccc !important; color: #666666 !important; cursor: not-allowed; opacity: 0.7; }
-        
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px auto;
+            background: #fff3f3; /* Slight red tint for "Wasted" attention */
+            padding: 10px;
+            border-radius: 8px;
+            width: 95%;
+            max-width: 400px;
+            border: 1px dashed var(--danger);
+        }
+        #wasted-check { width: 20px; height: 20px; margin: 0; }
         .btn-unlock { background: var(--primary); }
         .btn-add { background: var(--success); }
         .btn-remove { background: var(--danger); }
@@ -104,9 +118,15 @@
                         <option value="For Making an Order">For Making an Order</option>
                     </select>
                     <div id="order-code-input-block" style="display:none;">
-                        <input type="number" id="purpose-order" placeholder="Order Code">
+                        <label>Order Code:</label>
+                        <input type="number" id="purpose-order" placeholder="Enter 6-digit Code">
                         <button type="button" class="btn-toggle" onclick="verifyOrderForStock()">Verify Order</button>
                         <p id="order-verify-msg" class="status-msg"></p>
+
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="wasted-check">
+                            <label for="wasted-check" style="margin:0; color:var(--danger);">Part Wasted during assembly?</label>
+                        </div>>
                     </div>
                 </div>
                 <button id="final-submit-btn" class="btn-unlock" onclick="submitFinalData()">Confirm Transaction</button>
@@ -218,19 +238,46 @@
 
     function submitFinalData() {
         const qty = Number(document.getElementById('qty').value);
-        if (currentAction === 'OUT' && (qty > currentStockValue || !isOrderValid)) { alert("Check Stock/Order Verification"); return; }
+        const wastedCheckbox = document.getElementById('wasted-check');
+    
+        if (currentAction === 'OUT') {
+            if (qty > currentStockValue) { alert("Insufficient stock!"); return; }
+            if (!isOrderValid) { alert("Verify order or reason first!"); return; }
+        }
+
         const btn = document.getElementById('final-submit-btn');
-        btn.disabled = true; btn.innerText = "⏳ Saving...";
+        btn.disabled = true; btn.innerText = "⏳ Recording...";
+
         let link = "";
+        let wastedStatus = ""; // Default empty
+
         if (currentAction === 'OUT') {
             const r = document.getElementById('removal-reason').value;
             link = (r === "For Making an Order") ? document.getElementById('purpose-order').value : r;
+        
+            // Record "Yes" if checked, otherwise leave blank or "No"
+            if (r === "For Making an Order" && wastedCheckbox.checked) {
+            wastedStatus = "Yes";
+            }
         }
-        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({
-            type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName, action: currentAction,
-            quantity: qty, staffName: localStorage.getItem("warehouse_staff_name"),
-            purpose: document.getElementById('manual-purpose').value, orderCode: link
-        })}).then(() => { alert("Saved!"); location.reload(); });
+
+        const payload = {
+            type: "STOCK_MOVE",
+            partId: currentPartId,
+            partName: currentPartName,
+            action: currentAction,
+            quantity: qty,
+            staffName: localStorage.getItem("warehouse_staff_name"),
+            purpose: document.getElementById('manual-purpose').value,
+            orderCode: link,
+            wasted: wastedStatus // NEW: Sending the Wasted status to Column J
+        };
+
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+            .then(() => { 
+                alert("Data Recorded!"); 
+                location.reload(); 
+            });
     }
 
     function submitNewOrder() {
