@@ -378,7 +378,7 @@
 
             fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
                 .then(() => {
-                    alert("Success! Data recorded.");
+                    alert("Success! [${quantity}] [${partName}]  recorded.");
                     location.reload(); // This clears the lock by refreshing the page
                 })
                 .catch(err => {
