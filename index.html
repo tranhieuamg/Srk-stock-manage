@@ -180,7 +180,8 @@
     let isOrderValid = false;
     let currentEditOrderCode = "";
     let currentEditStatus = "";
-
+    let currentStockValue = 0; // NEW: Tracks the available stock for comparison
+    
     window.onload = function() {
         if (localStorage.getItem("warehouse_authenticated") === "true") {
             document.getElementById('login-overlay').style.display = 'none';
@@ -268,12 +269,19 @@
                 .then(data => {
                     const nameDisplay = document.getElementById('item-name');
                     const stockDisplay = document.getElementById('stock-display');
+                    .then(data => {
                     if (data.found) {
                         currentPartName = data.name;
-                        nameDisplay.innerText = "✅ " + data.name;
-                        nameDisplay.style.color = "green";
-                        stockDisplay.innerText = "Current Stock: " + data.stock;
-                        stockDisplay.style.color = data.stock < 5 ? "red" : "black";
+                        currentStockValue = Number(data.stock); // SAVE THE STOCK VALUE AS A NUMBER
+        
+                        document.getElementById('item-name').innerText = "✅ " + data.name;
+                        document.getElementById('stock-display').innerText = "Current Stock: " + data.stock;
+        
+                        // Visual feedback if the shelf is already empty
+                        if (currentStockValue <= 0) {
+                            document.getElementById('stock-display').innerText += " (OUT OF STOCK)";
+                            document.getElementById('stock-display').style.color = "red";
+                        }
                     } else {
                         nameDisplay.innerText = "❌ Code Not Recognized";
                         nameDisplay.style.color = "red";
@@ -353,18 +361,28 @@
             }
 
     function submitFinalData() {
-            const submitBtn = document.getElementById('final-submit-btn');
+        const submitBtn = document.getElementById('final-submit-btn');
+        const qtyInput = document.getElementById('qty');
+        const qtyToMove = Number(qtyInput.value);
     
-            // 1. Validation
-            if (currentAction === 'OUT') {
-                const reason = document.getElementById('removal-reason').value;
-                if (!reason) { alert("Please select a reason for removal."); return; }
-                if (!isOrderValid) { alert("Please verify the Order Code first."); return; }
+        // 1. STOCK LEVEL VALIDATION (The New Rule)
+        if (currentAction === 'OUT') {
+            // Check if removing more than available
+            if (qtyToMove > currentStockValue) {
+                alert(`❌ Error: Insufficient Stock.\nYou are trying to remove ${qtyToMove} units, but only ${currentStockValue} are available.`);
+                qtyInput.style.borderColor = "red";
+                return; // STOP the function here
             }
+        
+            // Standard Reason & Order validation
+            const reason = document.getElementById('removal-reason').value;
+            if (!reason) { alert("Please select a reason for removal."); return; }
+            if (!isOrderValid) { alert("Please verify the Order Code first."); return; }
+        }
 
-            // 2. Lock Button
-            submitBtn.disabled = true;
-            submitBtn.innerText = "⏳ Recording...";
+        // 2. Lock Button and Proceed (Existing Logic)
+        submitBtn.disabled = true;
+        submitBtn.innerText = "⏳ Recording...";
 
             // 3. Determine what goes into Column H
             let linkValue = "";
@@ -451,7 +469,7 @@
 
             fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
                 .then(() => {
-                    alert("Success! [${quantity}] [${partName}]  recorded.");
+                    alert("Success! " + [${quantity}] + [${partName}] + " recorded.");
                     location.reload(); // This clears the lock by refreshing the page
                 })
                 .catch(err => {
