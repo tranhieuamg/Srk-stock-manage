@@ -55,39 +55,30 @@
 </div>
 
 <div id="main-app" style="display:none;">
-    <p onclick="logout()" style="color: grey; cursor: pointer; margin-top: 50px; font-size: 0.8rem; text-decoration: underline;">
-    Log out
-    </p>
-    
-    <div id="scanner-view">
-        <h2>Scan Stock Item</h2>
-        <div id="reader"></div>
-        <button class="btn-toggle" onclick="showManual()">⌨️ Type Code </button>
+   <div id="dashboard-menu">
+    <div class="logo-container">
+        <img src="logo.png" alt="Logo" class="app-logo">
     </div>
+    <h2>Warehouse Dashboard</h2>
+    <button class="btn-unlock" onclick="showPage('stock')">📦 Stock Management</button>
+    <button class="btn-unlock" style="background:#6f42c1; margin-top:15px;" onclick="showPage('order')">📝 Order Management</button>
+    <p onclick="logout()" style="color:grey; text-decoration:underline; margin-top:40px;">Log out</p>
+</div>
 
-    <div id="manual-entry-section">
-        <h3>Enter 6-Digit Code</h3>
-        <input type="number" id="manual-code-input" pattern="\d*" inputmode="numeric" placeholder="e.g. 123456">
-        <button class="btn-unlock" onclick="handleManualSubmit()">Check Part</button>
-        <button class="btn-toggle" onclick="showScanner()">📷 Use Camera</button>
-    </div>
-    
-    <div id="controls" class="controls">
-        <h3 id="item-name">Searching...</h3>
-        <p id="item-id" style="color: #666; font-size: 0.9rem;"></p>
-        <p id="stock-display" style="font-weight: bold; font-size: 1.1rem; margin: 10px 0;"></p>
-        
-        <label for="qty">Quantity to Move:</label><br>
-        <input type="number" id="qty" value="1" min="1">
-        
-        <label for="purpose">Purpose / Order #:</label><br>
-        <input type="text" id="purpose" placeholder="e.g. Prototyping, Testing, Order #123">
-        
-        <div class="btn-group">
-            <button class="btn-add" onclick="submitData('IN')">➕ ADD</button>
-            <button class="btn-remove" onclick="submitData('OUT')">➖ REMOVE</button>
-        </div>
-        <button onclick="location.reload()" style="background:#666; margin-top: 20px; width: 100%;">Cancel / Next Scan</button>
+<div id="order-page" style="display:none;">
+    <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Menu</button>
+    <h3>Create New Order</h3>
+    <input type="text" id="cust-name" placeholder="Customer Name">
+    <input type="text" id="order-prod" placeholder="Product Ordered">
+    <textarea id="order-details" placeholder="Order Details/Notes" style="width:80%; padding:10px; border-radius:8px; margin:10px 0;"></textarea>
+    <input type="text" id="order-contract" placeholder="Contract Number">
+    <label>Deadline:</label>
+    <input type="date" id="order-deadline">
+    <button class="btn-add" onclick="submitNewOrder()" style="width:85%; margin-top:15px;">🚀 Create Order</button>
+</div>
+
+<div id="stock-page" style="display:none;">
+    <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Menu</button>
     </div>
 </div>
 
