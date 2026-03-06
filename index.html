@@ -9,20 +9,17 @@
         :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --purple: #6f42c1; --bg: #f4f7f6; }
         body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; background: var(--bg); color: #333; }
         
-        /* Form Elements */
         select, input, textarea { width: 90%; padding: 15px; margin: 10px 0; font-size: 1.1rem; border-radius: 8px; border: 1px solid #ccc; background: white; box-sizing: border-box; }
-        textarea { height: 80px; font-family: inherit; }
         
-        /* Layout Containers */
         .logo-container { width: 100%; text-align: center; padding: 10px 0; }
         .app-logo { max-width: 160px; height: auto; display: block; margin: 0 auto; }
         .sub-section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
         
-        /* PIN Overlay */
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         
-        /* Buttons */
         button { padding: 15px; font-size: 1rem; font-weight: bold; cursor: pointer; color: white; border: none; border-radius: 8px; transition: 0.2s; margin: 5px 0; }
+        button:disabled { background-color: #cccccc !important; color: #666666 !important; cursor: not-allowed; opacity: 0.7; }
+        
         .btn-unlock { background: var(--primary); width: 90%; }
         .btn-add { background: var(--success); flex: 1; }
         .btn-remove { background: var(--danger); flex: 1; }
@@ -30,28 +27,15 @@
         .btn-order { background: var(--purple); width: 90%; }
         .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
 
-        /* Styling for any disabled button */
-        button:disabled {
-        background-color: #cccccc !important;
-        color: #666666 !important;
-        cursor: not-allowed;
-        opacity: 0.7;
-        }
-        
-        /* Scanner */
         #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 8px; overflow: hidden; background: #000; }
-        #controls { display: none; }
-        
-        hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
         .status-msg { font-size: 0.9rem; font-weight: bold; margin: 5px 0; }
+        hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
     </style>
 </head>
 <body>
 
 <div id="login-overlay">
-    <div class="logo-container">
-        <img src="logo.png" alt="Company Logo" class="app-logo">
-    </div>
+    <div class="logo-container"><img src="logo.png" alt="Logo" class="app-logo"></div>
     <h2>System Access</h2>
     <select id="staff-name">
         <option value="" disabled selected>Select Staff Name</option>
@@ -67,13 +51,11 @@
 <div id="main-app" style="display:none;">
     
     <div id="dashboard-menu">
-        <div class="logo-container">
-            <img src="logo.png" alt="Logo" class="app-logo">
-        </div>
+        <div class="logo-container"><img src="logo.png" alt="Logo" class="app-logo"></div>
         <h2>Dashboard</h2>
         <button class="btn-unlock" onclick="showPage('stock')">📦 Stock Management</button>
         <button class="btn-order" onclick="showPage('order')">📝 Order Management</button>
-        <p onclick="logout()" style="color:grey; text-decoration:underline; margin-top:40px; cursor:pointer; font-size: 0.9rem;">Log out</p>
+        <p onclick="logout()" style="color:grey; text-decoration:underline; margin-top:40px; cursor:pointer;">Log out</p>
     </div>
 
     <div id="stock-page" style="display:none;">
@@ -87,18 +69,16 @@
 
         <div id="manual-entry-section" style="display:none;">
             <h3>Manual Part Entry</h3>
-            <input type="number" id="manual-code-input" pattern="\d*" inputmode="numeric" placeholder="Enter 6-Digit Part Code">
+            <input type="number" id="manual-code-input" placeholder="6-Digit Part Code">
             <button class="btn-unlock" onclick="handleManualSubmit()">Find Part</button>
             <button class="btn-toggle" onclick="showScanner()">📷 Use Camera</button>
         </div>
 
-        <div id="controls" class="sub-section">
+        <div id="controls" class="sub-section" style="display:none;">
             <h3 id="item-name">Checking...</h3>
             <p id="item-id" style="color: #666; font-size: 0.8rem;"></p>
             <p id="stock-display" style="font-weight: bold; font-size: 1.2rem;"></p>
-    
             <hr>
-    
             <div id="action-selector">
                 <p><strong>What would you like to do?</strong></p>
                 <div class="btn-group">
@@ -109,138 +89,192 @@
 
             <div id="movement-form" style="display:none; margin-top:20px;">
                 <h4 id="form-title">Moving Stock</h4>
-        
-                <label><strong>Quantity:</strong></label><br>
+                <label>Quantity:</label><br>
                 <input type="number" id="qty" value="1" min="1">
-        
-                <label><strong>Purpose:</strong></label><br>
-                <input type="text" id="manual-purpose" placeholder="e.g. Restocking, Testing, Prototyping">
+                <label>Purpose:</label><br>
+                <input type="text" id="manual-purpose" placeholder="Internal notes">
 
-                <div id="order-link-section" style="display:none; text-align: left; margin-left: 7%;">
-                    <label><strong>Reason for Removal:</strong></label><br>
+                <div id="order-link-section" style="display:none; text-align: left;">
+                    <label>Reason for Removal:</label><br>
                     <select id="removal-reason" onchange="handleReasonChange()">
-                        <option value="" disabled selected>Select a reason...</option>
+                        <option value="" disabled selected>Select reason...</option>
                         <option value="For Testing">For Testing</option>
                         <option value="For Post Processing">For Post Processing</option>
                         <option value="For Making an Order">For Making an Order</option>
                     </select>
-
-    <div id="order-code-input-block" style="display:none; margin-top: 10px;">
-        <label><strong>Order Code (6-digit):</strong></label><br>
-        <input type="number" id="purpose-order" placeholder="Enter Code">
-        <button type="button" class="btn-toggle" style="width:100%; font-size:0.8rem;" onclick="verifyOrderForStock()">Verify Order</button>
-        <p id="order-verify-msg" class="status-msg"></p>
-    </div>
-</div>
-
-                <button id="final-submit-btn" class="btn-unlock" style="margin-top:20px;" onclick="submitFinalData()">Submit Data</button>
+                    <div id="order-code-input-block" style="display:none; margin-top:10px;">
+                        <input type="number" id="purpose-order" placeholder="Order Code">
+                        <button type="button" class="btn-toggle" onclick="verifyOrderForStock()">Verify Order</button>
+                        <p id="order-verify-msg" class="status-msg"></p>
+                    </div>
+                </div>
+                <button id="final-submit-btn" class="btn-unlock" onclick="submitFinalData()">Confirm Transaction</button>
             </div>
-
-            <button onclick="location.reload()" style="background:#666; margin-top: 20px; width: 100%;">Cancel / Next Scan</button>
+            <button onclick="location.reload()" style="background:#666; width: 100%;">Cancel</button>
         </div>
+    </div>
 
     <div id="order-page" style="display:none;">
         <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Dashboard</button>
-        
         <div class="sub-section">
-            <h3>New Order Registration</h3>
+            <h3>New Order</h3>
             <input type="text" id="cust-name" placeholder="Customer Name">
             <input type="text" id="order-prod" placeholder="Product Model">
-            <textarea id="order-details" placeholder="Special requirements or notes..."></textarea>
-            <input type="text" id="order-contract" placeholder="Contract / PO Number">
-            <label style="font-size: 0.8rem;">Delivery Deadline:</label>
+            <textarea id="order-details" placeholder="Details"></textarea>
             <input type="date" id="order-deadline">
-            <button class="btn-add" style="width:100%;" onclick="submitNewOrder()">🚀 Create Order</button>
-        </div>
-
-        <div class="sub-section" style="border-top: 4px solid var(--purple);">
-            <h3>Update Order Status</h3>
-            <input type="number" id="search-order-id" placeholder="Enter 6-digit Order Code">
-            <button class="btn-unlock" onclick="findOrderForEdit()">Search Order</button>
-            
-            <div id="order-edit-controls" style="display:none; margin-top:15px; background:#f9f9f9; padding:15px; border-radius:8px; text-align: left;">
-                <p><strong>Customer:</strong> <span id="edit-cust"></span></p>
-                <p><strong>Product:</strong> <span id="edit-prod"></span></p>
-                <p><strong>Current Status:</strong> <span id="edit-status" style="font-weight: bold;"></span></p>
-                <button id="status-toggle-btn" style="width:100%;"></button>
-            </div>
+            <button class="btn-add" id="order-submit-btn" style="width:100%;" onclick="submitNewOrder()">🚀 Create Order</button>
         </div>
     </div>
 </div>
 
 <script>
-    // ================= CONFIGURATION =================
     const MY_M_K = "100110"; 
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
-    // =================================================
 
-    let currentPartId = "";
-    let currentPartName = "";
-    let html5QrCode;
-    let isOrderValid = false;
-    let currentEditOrderCode = "";
-    let currentEditStatus = "";
-    let currentStockValue = 0; // NEW: Tracks the available stock for comparison
-    
-    window.onload = function() {
+    let currentPartId = "", currentPartName = "", currentAction = "", html5QrCode;
+    let isOrderValid = false, currentStockValue = 0;
+
+    window.onload = () => {
         if (localStorage.getItem("warehouse_authenticated") === "true") {
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('main-app').style.display = 'block';
         }
     };
 
-    function showPage(page) {
-        document.getElementById('dashboard-menu').style.display = 'none';
-        document.getElementById('stock-page').style.display = 'none';
-        document.getElementById('order-page').style.display = 'none';
-        
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().catch(e => console.log("Stop error ignored"));
-        }
-
-        if (page === 'menu') document.getElementById('dashboard-menu').style.display = 'block';
-        if (page === 'stock') {
-            document.getElementById('stock-page').style.display = 'block';
-            startScanner();
-        }
-        if (page === 'order') document.getElementById('order-page').style.display = 'block';
-    }
-
     function checkPin() {
         const pin = document.getElementById('pin-input').value;
         const name = document.getElementById('staff-name').value;
-        if (!name || pin !== MY_M_K) { alert("Access Denied: Check PIN and Name"); return; }
+        if (!name || pin !== MY_M_K) { alert("Invalid PIN or Name"); return; }
         localStorage.setItem("warehouse_authenticated", "true");
         localStorage.setItem("warehouse_staff_name", name);
         location.reload();
     }
 
-    function logout() {
-        localStorage.clear();
-        location.reload();
+    function logout() { localStorage.clear(); location.reload(); }
+
+    function showPage(page) {
+        document.getElementById('dashboard-menu').style.display = 'none';
+        document.getElementById('stock-page').style.display = 'none';
+        document.getElementById('order-page').style.display = 'none';
+        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
+        if (page === 'menu') document.getElementById('dashboard-menu').style.display = 'block';
+        if (page === 'stock') { document.getElementById('stock-page').style.display = 'block'; startScanner(); }
+        if (page === 'order') document.getElementById('order-page').style.display = 'block';
     }
 
-    // --- STOCK & SCANNER LOGIC ---
     function startScanner() {
         if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: 250 };
-        html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess).catch(e => console.error(e));
+        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
+    }
+
+    function onScanSuccess(decodedText) {
+        if (decodedText.length !== 6) return;
+        const proceed = () => {
+            document.getElementById('scanner-view').style.display = 'none';
+            document.getElementById('manual-entry-section').style.display = 'none';
+            document.getElementById('controls').style.display = 'block';
+            currentPartId = decodedText;
+            fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${decodedText}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.found) {
+                        currentPartName = data.name;
+                        currentStockValue = Number(data.stock);
+                        document.getElementById('item-name').innerText = "✅ " + data.name;
+                        document.getElementById('stock-display').innerText = "Stock: " + data.stock;
+                    } else { alert("Part not found"); location.reload(); }
+                });
+        };
+        if (html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed);
+        else proceed();
+    }
+
+    function setActionMode(mode) {
+        currentAction = mode;
+        document.getElementById('action-selector').style.display = 'none';
+        document.getElementById('movement-form').style.display = 'block';
+        const os = document.getElementById('order-link-section');
+        if (mode === 'IN') { os.style.display = 'none'; isOrderValid = true; } 
+        else { os.style.display = 'block'; isOrderValid = false; }
+    }
+
+    function handleReasonChange() {
+        const reason = document.getElementById('removal-reason').value;
+        const block = document.getElementById('order-code-input-block');
+        if (reason === "For Making an Order") { block.style.display = 'block'; isOrderValid = false; } 
+        else { block.style.display = 'none'; isOrderValid = true; }
+    }
+
+    function verifyOrderForStock() {
+        const id = document.getElementById('purpose-order').value;
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
+            .then(res => res.json())
+            .then(data => {
+                const msg = document.getElementById('order-verify-msg');
+                if (data.found && data.status === "Unfinished") {
+                    msg.innerText = "✅ Valid: " + data.customer; msg.style.color = "green"; isOrderValid = true;
+                } else { msg.innerText = "❌ Invalid or Finished"; msg.style.color = "red"; isOrderValid = false; }
+            });
+    }
+
+    function submitFinalData() {
+        const qty = Number(document.getElementById('qty').value);
+        if (currentAction === 'OUT') {
+            if (qty > currentStockValue) { alert("Insufficient stock!"); return; }
+            if (!isOrderValid) { alert("Verify order/reason first!"); return; }
+        }
+        const btn = document.getElementById('final-submit-btn');
+        btn.disabled = true; btn.innerText = "Saving...";
+
+        let link = "";
+        if (currentAction === 'OUT') {
+            const r = document.getElementById('removal-reason').value;
+            link = (r === "For Making an Order") ? document.getElementById('purpose-order').value : r;
+        }
+
+        const payload = {
+            type: "STOCK_MOVE",
+            partId: currentPartId,
+            partName: currentPartName,
+            action: currentAction,
+            quantity: qty,
+            staffName: localStorage.getItem("warehouse_staff_name"),
+            purpose: document.getElementById('manual-purpose').value,
+            orderCode: link
+        };
+
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+            .then(() => { alert("Saved!"); location.reload(); });
+    }
+
+    function submitNewOrder() {
+        const customer = document.getElementById('cust-name').value;
+        const product = document.getElementById('order-prod').value;
+        if (!customer || !product) { alert("Fill all fields"); return; }
+        const btn = document.getElementById('order-submit-btn');
+        btn.disabled = true;
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({
+            type: "NEW_ORDER", customer, product,
+            details: document.getElementById('order-details').value,
+            deadline: document.getElementById('order-deadline').value
+        })}).then(res => res.json()).then(data => {
+            alert(`Order for ${customer} added! Code: ${data.code}`);
+            location.reload();
+        });
     }
 
     function showManual() {
-        const scannerView = document.getElementById('scanner-view');
-        const manualView = document.getElementById('manual-entry-section');
         if (html5QrCode && html5QrCode.isScanning) {
             html5QrCode.stop().then(() => {
-                scannerView.style.display = 'none';
-                manualView.style.display = 'block';
+                document.getElementById('scanner-view').style.display = 'none';
+                document.getElementById('manual-entry-section').style.display = 'block';
             });
         } else {
-            scannerView.style.display = 'none';
-            manualView.style.display = 'block';
+            document.getElementById('scanner-view').style.display = 'none';
+            document.getElementById('manual-entry-section').style.display = 'block';
         }
     }
-
+    
     function showScanner() {
         document.getElementById('manual-entry-section').style.display = 'none';
         document.getElementById('scanner-view').style.display = 'block';
@@ -248,301 +282,9 @@
     }
 
     function handleManualSubmit() {
-        const code = document.getElementById('manual-code-input').value;
-        if (code.length === 6) {
-            onScanSuccess(code);
-        } else { alert("Enter exactly 6 digits."); }
+        const c = document.getElementById('manual-code-input').value;
+        if (c.length === 6) onScanSuccess(c); else alert("Enter 6 digits");
     }
-
-    function onScanSuccess(decodedText) {
-        if (decodedText.length !== 6) return;
-
-        const proceed = () => {
-            document.getElementById('scanner-view').style.display = 'none';
-            document.getElementById('manual-entry-section').style.display = 'none';
-            currentPartId = decodedText;
-            document.getElementById('item-id').innerText = "ID: " + decodedText;
-            document.getElementById('controls').style.display = 'block';
-            
-            fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${decodedText}`)
-                .then(res => res.json())
-                .then(data => {
-                    const nameDisplay = document.getElementById('item-name');
-                    const stockDisplay = document.getElementById('stock-display');
-                    .then(data => {
-                    if (data.found) {
-                        currentPartName = data.name;
-                        currentStockValue = Number(data.stock); // SAVE THE STOCK VALUE AS A NUMBER
-        
-                        document.getElementById('item-name').innerText = "✅ " + data.name;
-                        document.getElementById('stock-display').innerText = "Current Stock: " + data.stock;
-        
-                        // Visual feedback if the shelf is already empty
-                        if (currentStockValue <= 0) {
-                            document.getElementById('stock-display').innerText += " (OUT OF STOCK)";
-                            document.getElementById('stock-display').style.color = "red";
-                        }
-                    } else {
-                        nameDisplay.innerText = "❌ Code Not Recognized";
-                        nameDisplay.style.color = "red";
-                    }
-                });
-        };
-
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(proceed).catch(proceed);
-        } else {
-            proceed();
-        }
-    }
-
-    function verifyOrderForStock() {
-        const id = document.getElementById('purpose-order').value;
-        const msg = document.getElementById('order-verify-msg');
-        if (id.length !== 6) { alert("Enter 6-digit order code"); return; }
-        
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.found && data.status === "Unfinished") {
-                    msg.innerText = "✅ Valid Order: " + data.customer;
-                    msg.style.color = "green";
-                    isOrderValid = true;
-                    document.getElementById('btn-in').disabled = false;
-                    document.getElementById('btn-out').disabled = false;
-                } else {
-                    msg.innerText = data.found ? "❌ Error: Order is Finished" : "❌ Error: Order Not Found";
-                    msg.style.color = "red";
-                    isOrderValid = false;
-                    document.getElementById('btn-in').disabled = true;
-                    document.getElementById('btn-out').disabled = true;
-                }
-            });
-    }
-
-    function submitData(action) {
-            if (!isOrderValid) { 
-                alert("Please verify an active order code first."); 
-                return; 
-            }
-    
-            const payload = {
-                type: "STOCK_MOVE",
-                partId: currentPartId,
-                partName: currentPartName,
-                action: action,
-                quantity: document.getElementById('qty').value,
-                staffName: localStorage.getItem("warehouse_staff_name"),
-                purpose: document.getElementById('manual-purpose').value, // Captured Purpose
-                orderCode: document.getElementById('purpose-order').value // Captured Order Code
-            };
-
-            fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
-                .then(() => { 
-                    alert(`Success! Recorded for Order ${payload.orderCode}`); 
-                    location.reload(); 
-                });
-        }
-    function handleReasonChange() {
-                const reason = document.getElementById('removal-reason').value;
-                const orderBlock = document.getElementById('order-code-input-block');
-                const msg = document.getElementById('order-verify-msg');
-
-                if (reason === "For Making an Order") {
-                    orderBlock.style.display = 'block';
-                    isOrderValid = false; // Must verify!
-                    msg.innerText = "";
-                } else {
-                    orderBlock.style.display = 'none';
-                    isOrderValid = true;  // Automatic approval for Testing/Processing
-                    msg.innerText = "✅ Reason accepted: " + reason;
-                    msg.style.color = "green";
-                }
-            }
-
-    function submitFinalData() {
-        const submitBtn = document.getElementById('final-submit-btn');
-        const qtyInput = document.getElementById('qty');
-        const qtyToMove = Number(qtyInput.value);
-    
-        // 1. STOCK LEVEL VALIDATION (The New Rule)
-        if (currentAction === 'OUT') {
-            // Check if removing more than available
-            if (qtyToMove > currentStockValue) {
-                alert(`❌ Error: Insufficient Stock.\nYou are trying to remove ${qtyToMove} units, but only ${currentStockValue} are available.`);
-                qtyInput.style.borderColor = "red";
-                return; // STOP the function here
-            }
-        
-            // Standard Reason & Order validation
-            const reason = document.getElementById('removal-reason').value;
-            if (!reason) { alert("Please select a reason for removal."); return; }
-            if (!isOrderValid) { alert("Please verify the Order Code first."); return; }
-        }
-
-        // 2. Lock Button and Proceed (Existing Logic)
-        submitBtn.disabled = true;
-        submitBtn.innerText = "⏳ Recording...";
-
-            // 3. Determine what goes into Column H
-            let linkValue = "";
-            if (currentAction === 'OUT') {
-                const reason = document.getElementById('removal-reason').value;
-                linkValue = (reason === "For Making an Order") 
-                            ? document.getElementById('purpose-order').value 
-                            : reason;
-            }
-
-    const payload = {
-            type: "STOCK_MOVE",
-            partId: currentPartId,
-            partName: currentPartName,
-            action: currentAction,
-            quantity: document.getElementById('qty').value,
-            staffName: localStorage.getItem("warehouse_staff_name"),
-            purpose: document.getElementById('manual-purpose').value, // Manual notes (Col G)
-            orderCode: linkValue // Reason or Code (Col H)
-                };
-
-                fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
-                    .then(() => {
-                        alert("Transaction Recorded Successfully!");
-                        location.reload();
-                    })
-                    .catch(err => {
-                        alert("Error saving data.");
-                        submitBtn.disabled = false;
-                        submitBtn.innerText = "Confirm Transaction";
-                    });
-            }
-    
-    let currentAction = ""; // Tracks if it's IN or OUT
-
-        function setActionMode(mode) {
-            currentAction = mode;
-            document.getElementById('action-selector').style.display = 'none';
-            document.getElementById('movement-form').style.display = 'block';
-    
-            const formTitle = document.getElementById('form-title');
-            const orderSection = document.getElementById('order-link-section');
-            const submitBtn = document.getElementById('final-submit-btn');
-
-            if (mode === 'IN') {
-                formTitle.innerText = "➕ Restocking Item";
-                formTitle.style.color = "var(--success)";
-                orderSection.style.display = 'none'; // Hide Order Code
-                isOrderValid = true; // No order needed for adding stock
-                submitBtn.style.background = "var(--success)";
-            } else {
-                formTitle.innerText = "➖ Order Fulfillment";
-                formTitle.style.color = "var(--danger)";
-                orderSection.style.display = 'block'; // Show Order Code
-                isOrderValid = false; // Must verify for removing stock
-                submitBtn.style.background = "var(--danger)";
-            }
-        }
-
-        function submitFinalData() {
-            // 1. Validation check
-            if (currentAction === 'OUT' && !isOrderValid) {
-                alert("For removal, you must verify a valid Order Code first.");
-                return;
-            }
-
-            const submitBtn = document.getElementById('final-submit-btn');
-            const qty = document.getElementById('qty').value;
-        
-            // 2. LOCK THE BUTTON IMMEDIATELY
-            submitBtn.disabled = true;
-            submitBtn.innerText = "⏳ Saving to Sheet...";
-
-            const payload = {
-                type: "STOCK_MOVE",
-                partId: currentPartId,
-                partName: currentPartName,
-                action: currentAction,
-                quantity: qty,
-                staffName: localStorage.getItem("warehouse_staff_name"),
-                purpose: document.getElementById('manual-purpose').value,
-                orderCode: currentAction === 'IN' ? "" : document.getElementById('purpose-order').value
-            };
-
-            fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
-                .then(() => {
-                    alert("Success! " + [${quantity}] + [${partName}] + " recorded.");
-                    location.reload(); // This clears the lock by refreshing the page
-                })
-                .catch(err => {
-                    // 3. RE-ENABLE ONLY ON ERROR
-                    alert("Error: Data not saved. Try again.");
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = "Confirm Submission";
-                });
-        }
-
-    // --- ORDER MANAGEMENT LOGIC ---
-    function submitNewOrder() {
-            const submitBtn = event.target; // Gets the button that was clicked
-            const customer = document.getElementById('cust-name').value;
-            const product = document.getElementById('order-prod').value;
-
-            if (!customer || !product) {
-                alert("Please fill in Customer and Product.");
-                return;
-            }
-
-            // LOCK THE BUTTON
-            submitBtn.disabled = true;
-            submitBtn.innerText = "⏳ Creating Order...";
-
-            const payload = {
-                type: "NEW_ORDER",
-                customer: customer,
-                product: product,
-                details: document.getElementById('order-details').value,
-                contract: document.getElementById('order-contract').value,
-                deadline: document.getElementById('order-deadline').value
-            };
-
-            fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
-                .then(res => res.json())
-                .then(data => { 
-                    alert(`Order for [${customer}] added!\nCODE: ${data.code}`); 
-                    location.reload(); 
-                })
-                .catch(err => {
-                    alert("Error creating order.");
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = "⏳ Create Order";
-                });
-        }
-
-    function findOrderForEdit() {
-        const id = document.getElementById('search-order-id').value;
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.found) {
-                    currentEditOrderCode = id;
-                    currentEditStatus = data.status;
-                    document.getElementById('edit-cust').innerText = data.customer;
-                    document.getElementById('edit-prod').innerText = data.product;
-                    document.getElementById('edit-status').innerText = data.status;
-                    document.getElementById('order-edit-controls').style.display = 'block';
-                    const btn = document.getElementById('status-toggle-btn');
-                    btn.innerText = data.status === "Unfinished" ? "Close Order (Finish)" : "Re-open Order";
-                    btn.style.background = data.status === "Unfinished" ? "var(--danger)" : "var(--success)";
-                } else { alert("Order code not found in database."); }
-            });
-    }
-
-    document.getElementById('status-toggle-btn').onclick = function() {
-        const newStatus = currentEditStatus === "Unfinished" ? "Finished" : "Unfinished";
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: "POST",
-            body: JSON.stringify({ type: "UPDATE_ORDER_STATUS", orderCode: currentEditOrderCode, newStatus: newStatus })
-        }).then(() => { alert("Status updated to " + newStatus); location.reload(); });
-    };
 </script>
 </body>
 </html>
