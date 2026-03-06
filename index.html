@@ -6,30 +6,51 @@
     <title>Warehouse Manager Pro</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --purple: #6f42c1; --bg: #f4f7f6; }
-        body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; background: var(--bg); color: #333; }
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --purple: #6f42c1; --bg: #f4f7f6; --text: #333; }
         
-        select, input, textarea { width: 90%; padding: 15px; margin: 10px 0; font-size: 1.1rem; border-radius: 8px; border: 1px solid #ccc; background: white; box-sizing: border-box; }
+        body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; background: var(--bg); color: var(--text); }
         
+        /* Unified Width and Centering */
+        select, input, textarea, .btn-full { 
+            width: 95%; 
+            max-width: 400px;
+            padding: 15px; 
+            margin: 10px auto; 
+            font-size: 1.1rem; 
+            border-radius: 8px; 
+            border: 1px solid #ccc; 
+            background: white; 
+            box-sizing: border-box; 
+            display: block;
+        }
+
         .logo-container { width: 100%; text-align: center; padding: 10px 0; }
-        .app-logo { max-width: 160px; height: auto; display: block; margin: 0 auto; }
-        .sub-section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .app-logo { max-width: 150px; height: auto; display: block; margin: 0 auto; }
         
+        .sub-section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 20px auto; max-width: 450px; }
+        
+        /* PIN Overlay */
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         
-        button { padding: 15px; font-size: 1rem; font-weight: bold; cursor: pointer; color: white; border: none; border-radius: 8px; transition: 0.2s; margin: 5px 0; }
+        /* Buttons */
+        button { padding: 15px; font-size: 1rem; font-weight: bold; cursor: pointer; color: white; border: none; border-radius: 8px; transition: 0.2s; display: block; margin: 10px auto; width: 95%; max-width: 400px; }
         button:disabled { background-color: #cccccc !important; color: #666666 !important; cursor: not-allowed; opacity: 0.7; }
         
-        .btn-unlock { background: var(--primary); width: 90%; }
-        .btn-add { background: var(--success); flex: 1; }
-        .btn-remove { background: var(--danger); flex: 1; }
-        .btn-toggle { background: #6c757d; width: 90%; }
-        .btn-order { background: var(--purple); width: 90%; }
-        .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+        .btn-unlock { background: var(--primary); }
+        .btn-add { background: var(--success); }
+        .btn-remove { background: var(--danger); }
+        .btn-toggle { background: #6c757d; }
+        .btn-order { background: var(--purple); }
+        .btn-cancel { background: #666; }
 
+        .btn-group-inline { display: flex; gap: 10px; width: 95%; max-width: 400px; margin: 10px auto; }
+        .btn-group-inline button { flex: 1; margin: 0; width: auto; }
+
+        /* Scanner & Status */
         #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 8px; overflow: hidden; background: #000; }
-        .status-msg { font-size: 0.9rem; font-weight: bold; margin: 5px 0; }
+        .status-msg { font-size: 0.9rem; font-weight: bold; margin: 10px 0; display: block; }
         hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+        label { font-weight: bold; display: block; margin-top: 15px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -49,7 +70,6 @@
 </div>
 
 <div id="main-app" style="display:none;">
-    
     <div id="dashboard-menu">
         <div class="logo-container"><img src="logo.png" alt="Logo" class="app-logo"></div>
         <h2>Dashboard</h2>
@@ -69,7 +89,7 @@
 
         <div id="manual-entry-section" style="display:none;">
             <h3>Manual Part Entry</h3>
-            <input type="number" id="manual-code-input" placeholder="6-Digit Part Code">
+            <input type="number" id="manual-code-input" placeholder="Enter 6-Digit Part Code">
             <button class="btn-unlock" onclick="handleManualSubmit()">Find Part</button>
             <button class="btn-toggle" onclick="showScanner()">📷 Use Camera</button>
         </div>
@@ -79,50 +99,56 @@
             <p id="item-id" style="color: #666; font-size: 0.8rem;"></p>
             <p id="stock-display" style="font-weight: bold; font-size: 1.2rem;"></p>
             <hr>
+            
             <div id="action-selector">
                 <p><strong>What would you like to do?</strong></p>
-                <div class="btn-group">
-                    <button class="btn-add" onclick="setActionMode('IN')">➕ Add to Stock</button>
-                    <button class="btn-remove" onclick="setActionMode('OUT')">➖ Remove from Stock</button>
+                <div class="btn-group-inline">
+                    <button class="btn-add" onclick="setActionMode('IN')">➕ Add</button>
+                    <button class="btn-remove" onclick="setActionMode('OUT')">➖ Remove</button>
                 </div>
             </div>
 
-            <div id="movement-form" style="display:none; margin-top:20px;">
+            <div id="movement-form" style="display:none;">
                 <h4 id="form-title">Moving Stock</h4>
-                <label>Quantity:</label><br>
+                <label>Quantity:</label>
                 <input type="number" id="qty" value="1" min="1">
-                <label>Purpose:</label><br>
-                <input type="text" id="manual-purpose" placeholder="Internal notes">
+                
+                <label>Purpose:</label>
+                <input type="text" id="manual-purpose" placeholder="Notes (Internal)">
 
-                <div id="order-link-section" style="display:none; text-align: left;">
-                    <label>Reason for Removal:</label><br>
+                <div id="order-link-section" style="display:none;">
+                    <label>Reason for Removal:</label>
                     <select id="removal-reason" onchange="handleReasonChange()">
                         <option value="" disabled selected>Select reason...</option>
                         <option value="For Testing">For Testing</option>
                         <option value="For Post Processing">For Post Processing</option>
                         <option value="For Making an Order">For Making an Order</option>
                     </select>
-                    <div id="order-code-input-block" style="display:none; margin-top:10px;">
-                        <input type="number" id="purpose-order" placeholder="Order Code">
+                    
+                    <div id="order-code-input-block" style="display:none;">
+                        <label>Order Code:</label>
+                        <input type="number" id="purpose-order" placeholder="Enter 6-digit Code">
                         <button type="button" class="btn-toggle" onclick="verifyOrderForStock()">Verify Order</button>
                         <p id="order-verify-msg" class="status-msg"></p>
                     </div>
                 </div>
-                <button id="final-submit-btn" class="btn-unlock" onclick="submitFinalData()">Confirm Transaction</button>
+                
+                <hr>
+                <button id="final-submit-btn" class="btn-unlock" onclick="submitFinalData()">Submit Data</button>
             </div>
-            <button onclick="location.reload()" style="background:#666; width: 100%;">Cancel</button>
+            <button class="btn-cancel" onclick="location.reload()">Cancel / Next Scan</button>
         </div>
     </div>
 
     <div id="order-page" style="display:none;">
         <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Dashboard</button>
         <div class="sub-section">
-            <h3>New Order</h3>
+            <h3>New Order Registration</h3>
             <input type="text" id="cust-name" placeholder="Customer Name">
             <input type="text" id="order-prod" placeholder="Product Model">
-            <textarea id="order-details" placeholder="Details"></textarea>
+            <textarea id="order-details" placeholder="Details/Notes"></textarea>
             <input type="date" id="order-deadline">
-            <button class="btn-add" id="order-submit-btn" style="width:100%;" onclick="submitNewOrder()">🚀 Create Order</button>
+            <button class="btn-add" id="order-submit-btn" onclick="submitNewOrder()">🚀 Create Order</button>
         </div>
     </div>
 </div>
@@ -174,6 +200,7 @@
             document.getElementById('manual-entry-section').style.display = 'none';
             document.getElementById('controls').style.display = 'block';
             currentPartId = decodedText;
+            document.getElementById('item-id').innerText = "ID: " + decodedText;
             fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${decodedText}`)
                 .then(res => res.json())
                 .then(data => {
@@ -185,7 +212,7 @@
                     } else { alert("Part not found"); location.reload(); }
                 });
         };
-        if (html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed);
+        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed);
         else proceed();
     }
 
@@ -207,10 +234,10 @@
 
     function verifyOrderForStock() {
         const id = document.getElementById('purpose-order').value;
+        const msg = document.getElementById('order-verify-msg');
         fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
             .then(res => res.json())
             .then(data => {
-                const msg = document.getElementById('order-verify-msg');
                 if (data.found && data.status === "Unfinished") {
                     msg.innerText = "✅ Valid: " + data.customer; msg.style.color = "green"; isOrderValid = true;
                 } else { msg.innerText = "❌ Invalid or Finished"; msg.style.color = "red"; isOrderValid = false; }
@@ -221,10 +248,10 @@
         const qty = Number(document.getElementById('qty').value);
         if (currentAction === 'OUT') {
             if (qty > currentStockValue) { alert("Insufficient stock!"); return; }
-            if (!isOrderValid) { alert("Verify order/reason first!"); return; }
+            if (!isOrderValid) { alert("Verify order or reason first!"); return; }
         }
         const btn = document.getElementById('final-submit-btn');
-        btn.disabled = true; btn.innerText = "Saving...";
+        btn.disabled = true; btn.innerText = "⏳ Recording...";
 
         let link = "";
         if (currentAction === 'OUT') {
@@ -232,19 +259,15 @@
             link = (r === "For Making an Order") ? document.getElementById('purpose-order').value : r;
         }
 
-        const payload = {
-            type: "STOCK_MOVE",
-            partId: currentPartId,
-            partName: currentPartName,
-            action: currentAction,
-            quantity: qty,
-            staffName: localStorage.getItem("warehouse_staff_name"),
-            purpose: document.getElementById('manual-purpose').value,
-            orderCode: link
-        };
-
-        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
-            .then(() => { alert("Saved!"); location.reload(); });
+        fetch(GOOGLE_SCRIPT_URL, { 
+            method: "POST", 
+            body: JSON.stringify({
+                type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName,
+                action: currentAction, quantity: qty,
+                staffName: localStorage.getItem("warehouse_staff_name"),
+                purpose: document.getElementById('manual-purpose').value, orderCode: link
+            })
+        }).then(() => { alert("Saved!"); location.reload(); });
     }
 
     function submitNewOrder() {
@@ -252,7 +275,7 @@
         const product = document.getElementById('order-prod').value;
         if (!customer || !product) { alert("Fill all fields"); return; }
         const btn = document.getElementById('order-submit-btn');
-        btn.disabled = true;
+        btn.disabled = true; btn.innerText = "⏳ Creating...";
         fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({
             type: "NEW_ORDER", customer, product,
             details: document.getElementById('order-details').value,
