@@ -116,12 +116,22 @@
                 <label><strong>Purpose:</strong></label><br>
                 <input type="text" id="manual-purpose" placeholder="e.g. Restocking, Testing, Prototyping">
 
-                <div id="order-link-section" style="display:none;">
-                    <label><strong>Link to Order (6-digit):</strong></label><br>
-                    <input type="number" id="purpose-order" placeholder="Enter Order Code">
-                    <button type="button" class="btn-toggle" style="width:60%; font-size:0.8rem;" onclick="verifyOrderForStock()">Verify Order</button>
-                    <p id="order-verify-msg" class="status-msg"></p>
-                </div>
+                <div id="order-link-section" style="display:none; text-align: left; margin-left: 7%;">
+                    <label><strong>Reason for Removal:</strong></label><br>
+                    <select id="removal-reason" onchange="handleReasonChange()">
+                        <option value="" disabled selected>Select a reason...</option>
+                        <option value="For Testing">For Testing</option>
+                        <option value="For Post Processing">For Post Processing</option>
+                        <option value="For Making an Order">For Making an Order</option>
+                    </select>
+
+    <div id="order-code-input-block" style="display:none; margin-top: 10px;">
+        <label><strong>Order Code (6-digit):</strong></label><br>
+        <input type="number" id="purpose-order" placeholder="Enter Code">
+        <button type="button" class="btn-toggle" style="width:100%; font-size:0.8rem;" onclick="verifyOrderForStock()">Verify Order</button>
+        <p id="order-verify-msg" class="status-msg"></p>
+    </div>
+</div>
 
                 <button id="final-submit-btn" class="btn-unlock" style="margin-top:20px;" onclick="submitFinalData()">Submit Data</button>
             </div>
@@ -325,6 +335,69 @@
                     location.reload(); 
                 });
         }
+    function handleReasonChange() {
+                const reason = document.getElementById('removal-reason').value;
+                const orderBlock = document.getElementById('order-code-input-block');
+                const msg = document.getElementById('order-verify-msg');
+
+                if (reason === "For Making an Order") {
+                    orderBlock.style.display = 'block';
+                    isOrderValid = false; // Must verify!
+                    msg.innerText = "";
+                } else {
+                    orderBlock.style.display = 'none';
+                    isOrderValid = true;  // Automatic approval for Testing/Processing
+                    msg.innerText = "✅ Reason accepted: " + reason;
+                    msg.style.color = "green";
+                }
+            }
+
+    function submitFinalData() {
+            const submitBtn = document.getElementById('final-submit-btn');
+    
+            // 1. Validation
+            if (currentAction === 'OUT') {
+                const reason = document.getElementById('removal-reason').value;
+                if (!reason) { alert("Please select a reason for removal."); return; }
+                if (!isOrderValid) { alert("Please verify the Order Code first."); return; }
+            }
+
+            // 2. Lock Button
+            submitBtn.disabled = true;
+            submitBtn.innerText = "⏳ Recording...";
+
+            // 3. Determine what goes into Column H
+            let linkValue = "";
+            if (currentAction === 'OUT') {
+                const reason = document.getElementById('removal-reason').value;
+                linkValue = (reason === "For Making an Order") 
+                            ? document.getElementById('purpose-order').value 
+                            : reason;
+            }
+
+    const payload = {
+            type: "STOCK_MOVE",
+            partId: currentPartId,
+            partName: currentPartName,
+            action: currentAction,
+            quantity: document.getElementById('qty').value,
+            staffName: localStorage.getItem("warehouse_staff_name"),
+            purpose: document.getElementById('manual-purpose').value, // Manual notes (Col G)
+            orderCode: linkValue // Reason or Code (Col H)
+                };
+
+                fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+                    .then(() => {
+                        alert("Transaction Recorded Successfully!");
+                        location.reload();
+                    })
+                    .catch(err => {
+                        alert("Error saving data.");
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "Confirm Transaction";
+                    });
+            }
+    
     let currentAction = ""; // Tracks if it's IN or OUT
 
         function setActionMode(mode) {
