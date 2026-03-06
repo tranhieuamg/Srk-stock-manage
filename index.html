@@ -169,31 +169,61 @@
     }
 
     // --- STOCK LOGIC ---
-    function startScanner() {
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
+    ffunction startScanner() {
+        // Only create a new instance if one doesn't exist
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader");
+        }
+    
+        // Only start if it's not already scanning
+        if (!html5QrCode.isScanning) {
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: 250 }, 
+                onScanSuccess
+            ).catch(err => console.error("Camera start error:", err));
+        }
     }
 
     function onScanSuccess(decodedText) {
         if (decodedText.length !== 6) return;
-        if (html5QrCode.isScanning) html5QrCode.stop().then(() => { document.getElementById('scanner-view').style.display = 'none'; });
 
-        currentPartId = decodedText;
-        document.getElementById('item-id').innerText = "ID: " + decodedText;
-        document.getElementById('controls').style.display = 'block';
+        // A helper function to change the UI and fetch data
+            const proceedToLookup = () => {
+            document.getElementById('scanner-view').style.display = 'none';
+            document.getElementById('manual-entry-section').style.display = 'none';
         
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${decodedText}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.found) {
-                    currentPartName = data.name;
-                    document.getElementById('item-name').innerText = "✅ " + data.name;
-                    document.getElementById('stock-display').innerText = "Current Stock: " + data.stock;
-                    document.getElementById('stock-display').style.color = data.stock < 5 ? "red" : "black";
-                } else {
-                    document.getElementById('item-name').innerText = "❌ Part Not Found";
-                }
-            }).catch(err => alert("Error connecting to database."));
+            currentPartId = decodedText;
+            const nameDisplay = document.getElementById('item-name');
+            const stockDisplay = document.getElementById('stock-display');
+            const controls = document.getElementById('controls');
+        
+            nameDisplay.innerText = "Checking...";
+            nameDisplay.style.color = "orange";
+            stockDisplay.innerText = ""; 
+            controls.style.display = 'block';
+
+            fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${decodedText}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.found) {
+                        currentPartName = data.name;
+                        nameDisplay.innerText = "✅ " + data.name;
+                        stockDisplay.innerText = "Current Stock: " + data.stock;
+                        stockDisplay.style.color = data.stock < 5 ? "red" : "black";
+                    } else {
+                        nameDisplay.innerText = "❌ Part Not Found";
+                    }
+                }).catch(err => alert("Error connecting to database."));
+        };
+
+        // If camera is active, stop it before showing results
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(proceedToLookup).catch(proceedToLookup);
+        } else {
+            // If manual entry, just proceed
+            proceedToLookup();
+        }
     }
 
     function verifyOrderForStock() {
@@ -265,10 +295,24 @@
     }
 
     function showManual() {
-        if (html5QrCode.isScanning) html5QrCode.stop().then(() => {
-            document.getElementById('scanner-view').style.display = 'none';
-            document.getElementById('manual-entry-section').style.display = 'block';
-        });
+        const scannerView = document.getElementById('scanner-view');
+        const manualView = document.getElementById('manual-entry-section');
+
+        // If camera is running, stop it first, then show manual
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                scannerView.style.display = 'none';
+                manualView.style.display = 'block';
+                }).catch(() => {
+                // If stop fails for some reason, show manual anyway
+                scannerView.style.display = 'none';
+                manualView.style.display = 'block';
+            });
+        } else {
+            // If camera isn't running, just jump to manual
+            scannerView.style.display = 'none';
+            manualView.style.display = 'block';
+        }
     }
 
     function showScanner() {
