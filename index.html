@@ -116,7 +116,42 @@
         localStorage.removeItem("warehouse_staff_name");
         location.reload();
     }
+function showPage(page) {
+    // Hide everything
+    document.getElementById('dashboard-menu').style.display = 'none';
+    document.getElementById('stock-page').style.display = 'none';
+    document.getElementById('order-page').style.display = 'none';
 
+    // Show selected
+    if (page === 'menu') document.getElementById('dashboard-menu').style.display = 'block';
+    if (page === 'stock') {
+        document.getElementById('stock-page').style.display = 'block';
+        startScanner(); // Only start camera when in stock mode
+    }
+    if (page === 'order') document.getElementById('order-page').style.display = 'block';
+}
+
+    function submitNewOrder() {
+        const payload = {
+            type: "NEW_ORDER",
+            customer: document.getElementById('cust-name').value,
+            product: document.getElementById('order-prod').value,
+            details: document.getElementById('order-details').value,
+            contract: document.getElementById('order-contract').value,
+            deadline: document.getElementById('order-deadline').value
+        };
+
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert("Order Created! Code: " + data.code);
+            location.reload();
+        });
+    }
+    
     function startScanner() {
         html5QrCode = new Html5Qrcode("reader");
         const config = { fps: 10, qrbox: { width: 250, height: 250 } };
