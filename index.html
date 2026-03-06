@@ -90,21 +90,34 @@
             <p id="stock-display" style="font-weight: bold; font-size: 1.2rem;"></p>
     
             <hr>
-            <label><strong>Quantity:</strong></label><br>
-            <input type="number" id="qty" value="1" min="1">
     
-            <label><strong>Purpose:</strong></label><br>
-            <input type="text" id="manual-purpose" placeholder="e.g. Prototyping, Testing, Internal Use">
-
-            <label><strong>Link to Order (6-digit):</strong></label><br>
-            <input type="number" id="purpose-order" placeholder="Enter Order Code">
-            <button type="button" class="btn-toggle" style="width:60%; font-size:0.8rem;" onclick="verifyOrderForStock()">Verify Order</button>
-            <p id="order-verify-msg" class="status-msg"></p>
-
-            <div class="btn-group">
-                <button id="btn-in" class="btn-add" onclick="submitData('IN')" disabled>➕ ADD IN</button>
-                <button id="btn-out" class="btn-remove" onclick="submitData('OUT')" disabled>➖ REMOVE OUT</button>
+            <div id="action-selector">
+                <p><strong>What would you like to do?</strong></p>
+                <div class="btn-group">
+                    <button class="btn-add" onclick="setActionMode('IN')">➕ Add to Stock</button>
+                    <button class="btn-remove" onclick="setActionMode('OUT')">➖ Remove from Stock</button>
+                </div>
             </div>
+
+            <div id="movement-form" style="display:none; margin-top:20px;">
+                <h4 id="form-title">Moving Stock</h4>
+        
+                <label><strong>Quantity:</strong></label><br>
+                <input type="number" id="qty" value="1" min="1">
+        
+                <label><strong>Purpose:</strong></label><br>
+                <input type="text" id="manual-purpose" placeholder="e.g. Restocking, Testing, Prototyping">
+
+                <div id="order-link-section" style="display:none;">
+                    <label><strong>Link to Order (6-digit):</strong></label><br>
+                    <input type="number" id="purpose-order" placeholder="Enter Order Code">
+                    <button type="button" class="btn-toggle" style="width:60%; font-size:0.8rem;" onclick="verifyOrderForStock()">Verify Order</button>
+                    <p id="order-verify-msg" class="status-msg"></p>
+                </div>
+
+                <button id="final-submit-btn" class="btn-unlock" style="margin-top:20px;" onclick="submitFinalData()">Confirm Transaction</button>
+            </div>
+
             <button onclick="location.reload()" style="background:#666; margin-top: 20px; width: 100%;">Cancel / Next Scan</button>
         </div>
 
@@ -303,6 +316,64 @@
                     alert(`Success! Recorded for Order ${payload.orderCode}`); 
                     location.reload(); 
                 });
+        }
+    let currentAction = ""; // Tracks if it's IN or OUT
+
+        function setActionMode(mode) {
+            currentAction = mode;
+            document.getElementById('action-selector').style.display = 'none';
+            document.getElementById('movement-form').style.display = 'block';
+    
+            const formTitle = document.getElementById('form-title');
+            const orderSection = document.getElementById('order-link-section');
+            const submitBtn = document.getElementById('final-submit-btn');
+
+            if (mode === 'IN') {
+                formTitle.innerText = "➕ Restocking Item";
+                formTitle.style.color = "var(--success)";
+                orderSection.style.display = 'none'; // Hide Order Code
+                isOrderValid = true; // No order needed for adding stock
+                submitBtn.style.background = "var(--success)";
+            } else {
+                formTitle.innerText = "➖ Order Fulfillment";
+                formTitle.style.color = "var(--danger)";
+                orderSection.style.display = 'block'; // Show Order Code
+                isOrderValid = false; // Must verify for removing stock
+                submitBtn.style.background = "var(--danger)";
+            }
+        }
+
+        function submitFinalData() {
+            // 1. Validation for Removal
+            if (currentAction === 'OUT' && !isOrderValid) {
+                alert("For removal, you must verify a valid Order Code first.");
+                return;
+            }
+
+            const qty = document.getElementById('qty').value;
+            const purpose = document.getElementById('manual-purpose').value;
+            const orderCode = document.getElementById('purpose-order').value;
+            const staff = localStorage.getItem("warehouse_staff_name");
+
+            if (!qty || qty <= 0) { alert("Please enter a valid quantity."); return; }
+
+            const payload = {
+                type: "STOCK_MOVE",
+                partId: currentPartId,
+                partName: currentPartName,
+                action: currentAction,
+                quantity: qty,
+                staffName: staff,
+                purpose: purpose,
+                orderCode: currentAction === 'IN' ? "" : orderCode // Send blank if it's an IN move
+            };
+
+            fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+                .then(() => {
+                    alert(`Stock ${currentAction === 'IN' ? 'Added' : 'Removed'} Successfully!`);
+                    location.reload();
+                })
+                .catch(err => alert("Error: Data not saved."));
         }
 
     // --- ORDER MANAGEMENT LOGIC ---
