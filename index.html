@@ -3,82 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Stock Manage</title>
+    <title>Stock Manage Pro</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    
     <style>
-        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; }
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --purple: #6f42c1; }
         body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; background: #f4f7f6; }
-        select { width: 80%; padding: 15px; margin: 10px 0; font-size: 1.1rem; border-radius: 8px; border: 1px solid #ccc; background: white; }
-
-        #manual-entry-section { display: none; margin-top: 20px; }
-        .btn-toggle { background: #6c757d; width: 80%; margin-top: 10px; }
+        select, input, textarea { width: 85%; padding: 15px; margin: 10px 0; font-size: 1.1rem; border-radius: 8px; border: 1px solid #ccc; background: white; box-sizing: border-box; }
         
-        .logo-container { width: 100%; text-align: center; padding: 10px 0; background: #f4f7f6; }
-        .app-logo { max-width: 180px; height: auto; display: block; margin: 0 auto; }
+        .logo-container { width: 100%; text-align: center; padding: 10px 0; }
+        .app-logo { max-width: 150px; height: auto; display: block; margin: 0 auto; }
 
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        #purpose { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; font-size: 1rem; }
-
-        #reader { width: 100%; max-width: 400px; margin: 20px auto; border-radius: 8px; overflow: hidden; }
-        .controls { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
-        input { width: 80%; padding: 15px; margin: 10px 0; font-size: 1.2rem; border: 1px solid #ddd; border-radius: 8px; }
+        
+        #reader { width: 100%; max-width: 400px; margin: 20px auto; border-radius: 8px; overflow: hidden; background: #000; }
+        .controls, .sub-section { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
+        
         .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
-        button { padding: 15px 25px; font-size: 1rem; font-weight: bold; cursor: pointer; color: white; border: none; border-radius: 8px; transition: 0.2s; }
+        button { padding: 15px; font-size: 1rem; font-weight: bold; cursor: pointer; color: white; border: none; border-radius: 8px; transition: 0.2s; margin: 5px 0; }
         .btn-add { background: var(--success); flex: 1; }
         .btn-remove { background: var(--danger); flex: 1; }
-        .btn-unlock { background: var(--primary); width: 80%; }
+        .btn-unlock { background: var(--primary); width: 85%; }
+        .btn-toggle { background: #6c757d; width: 85%; }
+        .btn-order { background: var(--purple); width: 85%; }
         
-        h2 { color: #333; }
+        h2, h3 { color: #333; margin-bottom: 5px; }
         #item-name { color: var(--primary); margin: 5px 0; }
+        #order-verify-msg { font-size: 0.9rem; font-weight: bold; margin: 5px 0; }
     </style>
 </head>
 <body>
 
 <div id="login-overlay">
-    <div class="logo-container">
-        <img src="logo.png" alt="Company Logo" class="app-logo">
-    </div>
+    <img src="logo.png" alt="Logo" class="app-logo">
     <h2>Stock Manage</h2>
-    <p>Select your name and enter PIN</p>
-    
     <select id="staff-name">
-        <option value="" disabled selected>Staff's name</option>
+        <option value="" disabled selected>Select your name</option>
         <option value="Hieu">Hieu</option>
         <option value="Trung">Trung</option>
         <option value="Cuong">Cuong</option>
         <option value="Vinh">Vinh</option>
     </select>
-
     <input type="password" id="pin-input" pattern="\d*" inputmode="numeric" placeholder="PIN Code">
     <button class="btn-unlock" onclick="checkPin()">Log in</button>
 </div>
 
 <div id="main-app" style="display:none;">
-   <div id="dashboard-menu">
-    <div class="logo-container">
+    
+    <div id="dashboard-menu">
         <img src="logo.png" alt="Logo" class="app-logo">
+        <h2>Dashboard</h2>
+        <button class="btn-unlock" onclick="showPage('stock')">📦 Stock Management</button>
+        <button class="btn-order" onclick="showPage('order')">📝 Order Management</button>
+        <p onclick="logout()" style="color:grey; text-decoration:underline; margin-top:40px; cursor:pointer;">Log out</p>
     </div>
-    <h2>Warehouse Dashboard</h2>
-    <button class="btn-unlock" onclick="showPage('stock')">📦 Stock Management</button>
-    <button class="btn-unlock" style="background:#6f42c1; margin-top:15px;" onclick="showPage('order')">📝 Order Management</button>
-    <p onclick="logout()" style="color:grey; text-decoration:underline; margin-top:40px;">Log out</p>
-</div>
 
-<div id="order-page" style="display:none;">
-    <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Menu</button>
-    <h3>Create New Order</h3>
-    <input type="text" id="cust-name" placeholder="Customer Name">
-    <input type="text" id="order-prod" placeholder="Product Ordered">
-    <textarea id="order-details" placeholder="Order Details/Notes" style="width:80%; padding:10px; border-radius:8px; margin:10px 0;"></textarea>
-    <input type="text" id="order-contract" placeholder="Contract Number">
-    <label>Deadline:</label>
-    <input type="date" id="order-deadline">
-    <button class="btn-add" onclick="submitNewOrder()" style="width:85%; margin-top:15px;">🚀 Create Order</button>
-</div>
+    <div id="stock-page" style="display:none;">
+        <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Menu</button>
+        
+        <div id="scanner-view">
+            <h2>Scan Part</h2>
+            <div id="reader"></div>
+            <button class="btn-toggle" onclick="showManual()">⌨️ Type Code Manually</button>
+        </div>
 
-<div id="stock-page" style="display:none;">
-    <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Menu</button>
+        <div id="manual-entry-section" style="display:none;">
+            <h3>Enter 6-Digit Part Code</h3>
+            <input type="number" id="manual-code-input" pattern="\d*" inputmode="numeric" placeholder="e.g. 123456">
+            <button class="btn-unlock" onclick="handleManualSubmit()">Lookup Part</button>
+            <button class="btn-toggle" onclick="showScanner()">📷 Switch to Camera</button>
+        </div>
+
+        <div id="controls" class="controls">
+            <h3 id="item-name">Checking...</h3>
+            <p id="item-id" style="color: #666; font-size: 0.8rem;"></p>
+            <p id="stock-display" style="font-weight: bold; font-size: 1.1rem;"></p>
+            
+            <hr>
+            <label>Quantity:</label>
+            <input type="number" id="qty" value="1" min="1">
+            
+            <label>Link to Order (6-digit):</label>
+            <input type="number" id="purpose-order" placeholder="Order Code">
+            <button type="button" class="btn-toggle" style="width:50%; font-size:0.8rem;" onclick="verifyOrderForStock()">Verify Order</button>
+            <p id="order-verify-msg"></p>
+
+            <div class="btn-group">
+                <button id="btn-in" class="btn-add" onclick="submitData('IN')" disabled>➕ ADD</button>
+                <button id="btn-out" class="btn-remove" onclick="submitData('OUT')" disabled>➖ REMOVE</button>
+            </div>
+            <button onclick="location.reload()" style="background:#666; margin-top: 20px; width: 100%;">Cancel / Next</button>
+        </div>
+    </div>
+
+    <div id="order-page" style="display:none;">
+        <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Menu</button>
+        
+        <div class="sub-section" style="display:block;">
+            <h3>New Order</h3>
+            <input type="text" id="cust-name" placeholder="Customer Name">
+            <input type="text" id="order-prod" placeholder="Product Ordered">
+            <textarea id="order-details" placeholder="Details"></textarea>
+            <input type="text" id="order-contract" placeholder="Contract #">
+            <input type="date" id="order-deadline">
+            <button class="btn-add" onclick="submitNewOrder()">🚀 Create Order</button>
+        </div>
+
+        <div class="sub-section" style="display:block; border-top: 2px solid #ddd;">
+            <h3>Search / Close Order</h3>
+            <input type="number" id="search-order-id" placeholder="6-digit Order Code">
+            <button class="btn-unlock" onclick="findOrderForEdit()">Search</button>
+            
+            <div id="order-edit-controls" style="display:none; margin-top:15px; background:#f9f9f9; padding:10px; border-radius:8px;">
+                <p><strong>Customer:</strong> <span id="edit-cust"></span></p>
+                <p><strong>Current Status:</strong> <span id="edit-status"></span></p>
+                <button id="status-toggle-btn" style="width:100%;"></button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -88,49 +128,110 @@
 
     let currentPartId = "";
     let currentPartName = "";
-    let html5QrCode; 
+    let html5QrCode;
+    let isOrderValid = false;
+    let currentEditOrderCode = "";
+    let currentEditStatus = "";
 
     window.onload = function() {
         if (localStorage.getItem("warehouse_authenticated") === "true") {
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('main-app').style.display = 'block';
-            startScanner();
         }
     };
+
+    function showPage(page) {
+        document.getElementById('dashboard-menu').style.display = 'none';
+        document.getElementById('stock-page').style.display = 'none';
+        document.getElementById('order-page').style.display = 'none';
+        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
+
+        if (page === 'menu') document.getElementById('dashboard-menu').style.display = 'block';
+        if (page === 'stock') {
+            document.getElementById('stock-page').style.display = 'block';
+            startScanner();
+        }
+        if (page === 'order') document.getElementById('order-page').style.display = 'block';
+    }
 
     function checkPin() {
         const pin = document.getElementById('pin-input').value;
         const name = document.getElementById('staff-name').value;
-        if (!name) { alert("Please select your name first."); return; }
-        if (pin === MY_M_K) {
-            localStorage.setItem("warehouse_authenticated", "true");
-            localStorage.setItem("warehouse_staff_name", name);
-            document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('main-app').style.display = 'block';
-            startScanner();
-        } else { alert("Incorrect PIN."); }
+        if (!name || pin !== MY_M_K) { alert("Invalid Credentials"); return; }
+        localStorage.setItem("warehouse_authenticated", "true");
+        localStorage.setItem("warehouse_staff_name", name);
+        location.reload();
     }
 
     function logout() {
-        localStorage.removeItem("warehouse_authenticated");
-        localStorage.removeItem("warehouse_staff_name");
+        localStorage.clear();
         location.reload();
     }
-function showPage(page) {
-    // Hide everything
-    document.getElementById('dashboard-menu').style.display = 'none';
-    document.getElementById('stock-page').style.display = 'none';
-    document.getElementById('order-page').style.display = 'none';
 
-    // Show selected
-    if (page === 'menu') document.getElementById('dashboard-menu').style.display = 'block';
-    if (page === 'stock') {
-        document.getElementById('stock-page').style.display = 'block';
-        startScanner(); // Only start camera when in stock mode
+    // --- STOCK LOGIC ---
+    function startScanner() {
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
     }
-    if (page === 'order') document.getElementById('order-page').style.display = 'block';
-}
 
+    function onScanSuccess(decodedText) {
+        if (decodedText.length !== 6) return;
+        if (html5QrCode.isScanning) html5QrCode.stop().then(() => { document.getElementById('scanner-view').style.display = 'none'; });
+
+        currentPartId = decodedText;
+        document.getElementById('item-id').innerText = "ID: " + decodedText;
+        document.getElementById('controls').style.display = 'block';
+        
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${decodedText}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.found) {
+                    currentPartName = data.name;
+                    document.getElementById('item-name').innerText = "✅ " + data.name;
+                    document.getElementById('stock-display').innerText = "Current Stock: " + data.stock;
+                    document.getElementById('stock-display').style.color = data.stock < 5 ? "red" : "black";
+                } else {
+                    document.getElementById('item-name').innerText = "❌ Part Not Found";
+                }
+            }).catch(err => alert("Error connecting to database."));
+    }
+
+    function verifyOrderForStock() {
+        const id = document.getElementById('purpose-order').value;
+        const msg = document.getElementById('order-verify-msg');
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.found && data.status === "Unfinished") {
+                    msg.innerText = "✅ Order Valid: " + data.customer;
+                    msg.style.color = "green";
+                    isOrderValid = true;
+                    document.getElementById('btn-in').disabled = false;
+                    document.getElementById('btn-out').disabled = false;
+                } else {
+                    msg.innerText = data.found ? "❌ Order is Finished" : "❌ Order Not Found";
+                    msg.style.color = "red";
+                    isOrderValid = false;
+                }
+            });
+    }
+
+    function submitData(action) {
+        if (!isOrderValid) { alert("Verify valid order first!"); return; }
+        const payload = {
+            type: "STOCK_MOVE",
+            partId: currentPartId,
+            partName: currentPartName,
+            action: action,
+            quantity: document.getElementById('qty').value,
+            staffName: localStorage.getItem("warehouse_staff_name"),
+            purpose: document.getElementById('purpose-order').value
+        };
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+            .then(() => { alert("Success!"); location.reload(); });
+    }
+
+    // --- ORDER LOGIC ---
     function submitNewOrder() {
         const payload = {
             type: "NEW_ORDER",
@@ -140,38 +241,34 @@ function showPage(page) {
             contract: document.getElementById('order-contract').value,
             deadline: document.getElementById('order-deadline').value
         };
-
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: "POST",
-            body: JSON.stringify(payload)
-        })
-        .then(res => res.json())
-        .then(data => {
-            alert("Order Created! Code: " + data.code);
-            location.reload();
-        });
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+            .then(res => res.json())
+            .then(data => { alert("Created! Order Code: " + data.code); location.reload(); });
     }
-    
-    function startScanner() {
-        html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-        html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess).catch(err => console.error(err));
+
+    function findOrderForEdit() {
+        const id = document.getElementById('search-order-id').value;
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.found) {
+                    currentEditOrderCode = id;
+                    currentEditStatus = data.status;
+                    document.getElementById('edit-cust').innerText = data.customer;
+                    document.getElementById('edit-status').innerText = data.status;
+                    document.getElementById('order-edit-controls').style.display = 'block';
+                    const btn = document.getElementById('status-toggle-btn');
+                    btn.innerText = data.status === "Unfinished" ? "Mark as Finished" : "Re-open Order";
+                    btn.className = data.status === "Unfinished" ? "btn-remove" : "btn-add";
+                } else { alert("Order not found"); }
+            });
     }
 
     function showManual() {
-        const scannerView = document.getElementById('scanner-view');
-        const manualView = document.getElementById('manual-entry-section');
-        
-        // Safety: Check if scanning before trying to stop
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => {
-                scannerView.style.display = 'none';
-                manualView.style.display = 'block';
-            });
-        } else {
-            scannerView.style.display = 'none';
-            manualView.style.display = 'block';
-        }
+        if (html5QrCode.isScanning) html5QrCode.stop().then(() => {
+            document.getElementById('scanner-view').style.display = 'none';
+            document.getElementById('manual-entry-section').style.display = 'block';
+        });
     }
 
     function showScanner() {
@@ -182,78 +279,10 @@ function showPage(page) {
 
     function handleManualSubmit() {
         const code = document.getElementById('manual-code-input').value;
-        if (code.length !== 6) { alert("Please enter a valid 6-digit code."); return; }
-        document.getElementById('manual-entry-section').style.display = 'none';
-        onScanSuccess(code);
-    }
-
-    function onScanSuccess(decodedText) {
-        if (decodedText.length !== 6) return;
-
-        // Try to stop camera if it's running
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => {
-                document.getElementById('reader').style.display = 'none';
-            });
-        }
-
-        currentPartId = decodedText;
-        const nameDisplay = document.getElementById('item-name');
-        const stockDisplay = document.getElementById('stock-display');
-        const controls = document.getElementById('controls');
-        
-        nameDisplay.innerText = "Checking...";
-        nameDisplay.style.color = "orange";
-        stockDisplay.innerText = ""; 
-        controls.style.display = 'block';
-        document.getElementById('scanner-view').style.display = 'none';
-
-        fetch(`${GOOGLE_SCRIPT_URL}?id=${decodedText}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.found) {
-                    currentPartName = data.name;
-                    nameDisplay.innerText = "✅ " + currentPartName;
-                    nameDisplay.style.color = "green";
-                    stockDisplay.innerText = "Current Stock: " + data.stock + " units";
-                    stockDisplay.style.color = (data.stock <= 5) ? "red" : "black";
-                    document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'block');
-                } else {
-                    nameDisplay.innerText = "❌ ERROR: " + (data.error || "Not found");
-                    nameDisplay.style.color = "red";
-                    document.querySelectorAll('.btn-group button').forEach(b => b.style.display = 'none');
-                }
-            })
-            .catch(err => {
-                nameDisplay.innerText = "Connection Error";
-                nameDisplay.style.color = "red";
-            });
-    }
-
-    function submitData(action) {
-        const qty = document.getElementById('qty').value;
-        const purpose = document.getElementById('purpose').value;
-        const staff = localStorage.getItem("warehouse_staff_name");
-
-        if (!purpose) { alert("Please enter a purpose."); return; }
-
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            body: JSON.stringify({
-                partId: currentPartId,
-                partName: currentPartName,
-                action: action,
-                quantity: qty,
-                staffName: staff,
-                purpose: purpose
-            })
-        })
-        .then(() => {
-            alert(`Recorded: ${currentPartName} (${action} ${qty})`);
-            location.reload(); 
-        })
-        .catch(err => alert("Submission failed."));
+        if (code.length === 6) {
+            document.getElementById('manual-entry-section').style.display = 'none';
+            onScanSuccess(code);
+        } else { alert("Enter 6 digits"); }
     }
 </script>
 </body>
