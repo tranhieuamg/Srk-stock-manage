@@ -65,7 +65,7 @@
         <h2>Dashboard</h2>
         <button class="btn-unlock" onclick="showPage('stock')">📦 Stock Management</button>
         <button class="btn-order" onclick="showPage('order')">📝 Order Management</button>
-        <p onclick="logout()" style="color:grey; text-decoration:underline; margin-top:40px; cursor:pointer; font-size: 0.9rem;">Log out / Lock System</p>
+        <p onclick="logout()" style="color:grey; text-decoration:underline; margin-top:40px; cursor:pointer; font-size: 0.9rem;">Log out</p>
     </div>
 
     <div id="stock-page" style="display:none;">
@@ -115,7 +115,7 @@
                     <p id="order-verify-msg" class="status-msg"></p>
                 </div>
 
-                <button id="final-submit-btn" class="btn-unlock" style="margin-top:20px;" onclick="submitFinalData()">Confirm Transaction</button>
+                <button id="final-submit-btn" class="btn-unlock" style="margin-top:20px;" onclick="submitFinalData()">Submit Data</button>
             </div>
 
             <button onclick="location.reload()" style="background:#666; margin-top: 20px; width: 100%;">Cancel / Next Scan</button>
