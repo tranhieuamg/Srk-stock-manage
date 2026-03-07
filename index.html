@@ -247,37 +247,58 @@
     }
 
     function listPreviousPOs() {
-        const historyDiv = document.getElementById('po-history-list');
-        historyDiv.innerHTML = "⏳ Loading history...";
-        historyDiv.style.display = "block";
-
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=part_po_list&id=${currentPartId}`)
-            .then(res => res.json())
-            .then(data => {
-                // Check if there are any keys in the returned history object
-                const poKeys = Object.keys(data.history);
-            
-                if (poKeys.length > 0) {
-                    let htmlContent = "<strong>Recent POs for this item:</strong><ul style='text-align:left; margin:5px 0; padding-left:20px;'>";
-                
-                    poKeys.forEach(po => {
-                        htmlContent += `<li style="margin-bottom:5px;">
-                            <span style="color:var(--purple); font-weight:bold;">${po}</span>: 
-                            <i style="color:#555;">${data.history[po]}</i>
-                        </li>`;
-                    });
-                
-                    htmlContent += "</ul>";
-                    historyDiv.innerHTML = htmlContent;
-                } else {
-                    historyDiv.innerHTML = "<em>No previous PO history found for this part.</em>";
-                }
-            })
-            .catch(err => {
-                historyDiv.innerHTML = "❌ Error loading history.";
-                console.error(err);
-            });
+    const historyDiv = document.getElementById('po-history-list');
+    
+    // Safety check: is a part scanned?
+    if (!currentPartId) {
+        alert("Please scan a part first.");
+        return;
     }
+
+    historyDiv.innerHTML = "⏳ Loading history...";
+    historyDiv.style.display = "block";
+
+    fetch(`${GOOGLE_SCRIPT_URL}?mode=part_po_list&id=${currentPartId}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
+        .then(data => {
+            // Check if 'history' exists and get its keys
+            const poKeys = data.history ? Object.keys(data.history) : [];
+            
+            if (poKeys.length > 0) {
+                let htmlContent = "<p style='margin:5px 0;'><strong>Recent History:</strong></p><ul style='text-align:left; padding-left:20px; margin:0;'>";
+                
+                poKeys.forEach(po => {
+                    const desc = data.history[po];
+                    // Making the PO clickable to save time!
+                    htmlContent += `<li style="margin-bottom:8px; font-size:0.85rem; border-bottom:1px solid #eee; padding-bottom:4px;">
+                        <span style="color:var(--purple); font-weight:bold; text-decoration:underline; cursor:pointer;" 
+                              onclick="selectExistingPO('${po}')">${po}</span>: 
+                        <i style="color:#666;">${desc}</i>
+                    </li>`;
+                });
+                
+                htmlContent += "</ul>";
+                historyDiv.innerHTML = htmlContent;
+            } else {
+                historyDiv.innerHTML = "<p style='font-size:0.8rem; color:#888;'>No previous PO history found for this part.</p>";
+            }
+        })
+        .catch(err => {
+            console.error("History Fetch Error:", err);
+            historyDiv.innerHTML = "<p style='color:var(--danger); font-size:0.8rem;'>❌ Error loading history. Check Connection.</p>";
+        });
+}
+
+// NEW: Helper function to auto-fill the PO when clicked
+function selectExistingPO(poNumber) {
+    document.getElementById('po-number-input').value = poNumber;
+    isPOValid = true;
+    document.getElementById('po-msg').innerText = "✅ PO Selected from History";
+    document.getElementById('po-msg').style.color = "green";
+}
 
     function handleReasonChange() {
         const r = document.getElementById('removal-reason').value;
