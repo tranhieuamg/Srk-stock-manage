@@ -3,18 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Warehouse Manager Pro</title>
+    <title>Warehouse Pro</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --purple: #6f42c1; --bg: #f4f7f6; --text: #333; }
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --warning: #d39e00; --purple: #6f42c1; --bg: #f4f7f6; --text: #333; }
         body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; background: var(--bg); color: var(--text); }
         
-        select, input, textarea { 
-            width: 95%; max-width: 400px; padding: 15px; margin: 10px auto; 
-            font-size: 1.1rem; border-radius: 8px; border: 1px solid #ccc; 
-            background: white; box-sizing: border-box; display: block;
-        }
-
+        select, input, textarea { width: 95%; max-width: 400px; padding: 15px; margin: 10px auto; font-size: 1.1rem; border-radius: 8px; border: 1px solid #ccc; background: white; box-sizing: border-box; display: block; }
+        
         .logo-container { width: 100%; text-align: center; padding: 10px 0; }
         .app-logo { max-width: 150px; height: auto; display: block; margin: 0 auto; }
         .sub-section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 20px auto; max-width: 450px; }
@@ -22,25 +18,21 @@
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         
         button { padding: 15px; font-size: 1rem; font-weight: bold; cursor: pointer; color: white; border: none; border-radius: 8px; transition: 0.2s; display: block; margin: 10px auto; width: 95%; max-width: 400px; }
-        button:disabled { background-color: #cccccc !important; color: #666666 !important; cursor: not-allowed; opacity: 0.7; }
-
-        .checkbox-container {
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-            margin: 15px auto; background: #fff3f3; padding: 10px; border-radius: 8px;
-            width: 95%; max-width: 400px; border: 1px dashed var(--danger);
-        }
-        #wasted-check { width: 20px; height: 20px; margin: 0; }
-
+        button:disabled { background-color: #cccccc !important; cursor: not-allowed; opacity: 0.7; }
+        
         .btn-unlock { background: var(--primary); }
         .btn-add { background: var(--success); }
         .btn-remove { background: var(--danger); }
         .btn-toggle { background: #6c757d; }
         .btn-order { background: var(--purple); }
         .btn-cancel { background: #666; }
-
+        
         .btn-group-inline { display: flex; gap: 10px; width: 95%; max-width: 400px; margin: 10px auto; }
-        .btn-group-inline button { flex: 1; margin: 0; width: auto; }
-
+        .btn-group-inline button { flex: 1; margin: 0; width: auto; font-size: 0.8rem; }
+        
+        .checkbox-container { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 15px auto; background: #fff3f3; padding: 10px; border-radius: 8px; width: 95%; max-width: 400px; border: 1px dashed var(--danger); }
+        #wasted-check { width: 20px; height: 20px; margin: 0; }
+        
         #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 8px; overflow: hidden; background: #000; }
         .status-msg { font-size: 0.9rem; font-weight: bold; margin: 10px 0; display: block; }
         hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
@@ -80,15 +72,15 @@
             <button class="btn-toggle" onclick="showManual()">⌨️ Type Code Manually</button>
         </div>
         <div id="manual-entry-section" style="display:none;">
-            <h3>Manual Part Entry</h3>
             <input type="number" id="manual-code-input" placeholder="6-Digit Part Code">
             <button class="btn-unlock" onclick="handleManualSubmit()">Find Part</button>
             <button class="btn-toggle" onclick="showScanner()">📷 Use Camera</button>
         </div>
+
         <div id="controls" class="sub-section" style="display:none;">
             <h3 id="item-name">Checking...</h3>
             <p id="item-id" style="color: #666; font-size: 0.8rem;"></p>
-            <p id="stock-display" style="font-weight: bold; font-size: 1.2rem;"></p>
+            <p id="stock-display" style="font-weight: bold; font-size: 1.4rem; padding: 10px;"></p>
             <hr>
             <div id="action-selector">
                 <div class="btn-group-inline">
@@ -96,6 +88,7 @@
                     <button class="btn-remove" onclick="setActionMode('OUT')">➖ Remove</button>
                 </div>
             </div>
+
             <div id="movement-form" style="display:none;">
                 <h4 id="form-title">Moving Stock</h4>
                 <label>Quantity:</label>
@@ -104,55 +97,57 @@
                 <input type="text" id="manual-purpose" placeholder="Notes (Internal)">
 
                 <div id="po-link-section" style="display:none;">
-                    <label><strong>PO / Contract / Tracking:</strong></label>
-                    <div class="btn-group-inline" style="margin-bottom:10px;">
+                    <label>PO / Contract / Tracking:</label>
+                    <div class="btn-group-inline">
                         <button type="button" class="btn-toggle" onclick="setPOChoice('none')">None</button>
                         <button type="button" class="btn-toggle" onclick="setPOChoice('search')">Search</button>
-                        <button type="button" class="btn-toggle" onclick="setPOChoice('new')">Create New</button>
+                        <button type="button" class="btn-toggle" onclick="setPOChoice('new')">New</button>
                     </div>
                     <div id="po-input-block" style="display:none;">
-                        <input type="text" id="po-number-input" placeholder="Enter PO or Tracking #">
-                        <button id="po-verify-btn" type="button" class="btn-unlock" style="background:var(--purple); display:none;" onclick="verifyPO()">Verify PO</button>
+                        <input type="text" id="po-number-input" placeholder="PO #">
+                        <input type="text" id="po-description" placeholder="Description" style="display:none;">
+                        <div class="btn-group-inline" id="po-search-btns" style="display:none;">
+                            <button type="button" class="btn-unlock" style="background:var(--purple);" onclick="verifyPO()">Verify #</button>
+                            <button type="button" class="btn-toggle" style="background:#444;" onclick="listPreviousPOs()">History</button>
+                        </div>
                         <p id="po-msg" class="status-msg"></p>
+                        <div id="po-history-list" style="font-size:0.7rem; background:#eee; padding:5px; display:none; border-radius:8px;"></div>
                     </div>
                 </div>
 
                 <div id="order-link-section" style="display:none;">
                     <label>Reason for Removal:</label>
                     <select id="removal-reason" onchange="handleReasonChange()">
-                        <option value="" disabled selected>Select a reason...</option>
+                        <option value="" disabled selected>Select reason...</option>
                         <option value="For Testing">For Testing</option>
                         <option value="For Post Processing">For Post Processing</option>
                         <option value="For Making an Order">For Making an Order</option>
                     </select>
                     <div id="order-code-input-block" style="display:none;">
-                        <label>Order Code:</label>
-                        <input type="number" id="purpose-order" placeholder="6-digit Order Code">
+                        <input type="number" id="purpose-order" placeholder="Order Code">
                         <button type="button" class="btn-toggle" onclick="verifyOrderForStock()">Verify Order</button>
                         <p id="order-verify-msg" class="status-msg"></p>
                         <div class="checkbox-container">
                             <input type="checkbox" id="wasted-check">
-                            <label for="wasted-check" style="margin:0; color:var(--danger);">Part Wasted during assembly?</label>
+                            <label for="wasted-check" style="color:var(--danger); margin:0;">Wasted in assembly?</label>
                         </div>
                     </div>
                 </div>
-
-                <hr>
                 <button id="final-submit-btn" class="btn-unlock" onclick="submitFinalData()">Confirm Transaction</button>
             </div>
-            <button class="btn-cancel" onclick="location.reload()">Cancel / Next</button>
+            <button class="btn-cancel" onclick="location.reload()">Cancel</button>
         </div>
     </div>
 
     <div id="order-page" style="display:none;">
         <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Dashboard</button>
         <div class="sub-section">
-            <h3>New Order Registration</h3>
+            <h3>New Order</h3>
             <input type="text" id="cust-name" placeholder="Customer Name *">
             <input type="text" id="order-prod" placeholder="Product Model *">
-            <textarea id="order-details" placeholder="Details/Notes (Optional)"></textarea>
-            <input type="text" id="order-po" placeholder="PO or Contract Number (Optional)">
-            <label>Delivery Deadline *</label>
+            <textarea id="order-details" placeholder="Details"></textarea>
+            <input type="text" id="order-po" placeholder="PO # (Optional)">
+            <label>Deadline *</label>
             <input type="date" id="order-deadline">
             <button class="btn-add" id="order-submit-btn" onclick="submitNewOrder()">🚀 Create Order</button>
         </div>
@@ -163,20 +158,15 @@
     const MY_M_K = "100110"; 
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
 
-    let currentPartId = "", currentPartName = "", currentAction = "", html5QrCode;
-    let isOrderValid = false, isPOValid = false, poChoice = "", currentStockValue = 0;
+    let currentPartId="", currentPartName="", currentAction="", html5QrCode;
+    let isOrderValid=false, isPOValid=false, currentStockValue=0, poChoice="";
 
-    window.onload = () => {
-        if (localStorage.getItem("warehouse_authenticated") === "true") {
-            document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('main-app').style.display = 'block';
-        }
-    };
+    window.onload = () => { if(localStorage.getItem("warehouse_authenticated")==="true"){ document.getElementById('login-overlay').style.display='none'; document.getElementById('main-app').style.display='block'; } };
 
     function checkPin() {
         const pin = document.getElementById('pin-input').value;
         const name = document.getElementById('staff-name').value;
-        if (!name || pin !== MY_M_K) { alert("Invalid Credentials"); return; }
+        if (!name || pin !== MY_M_K) { alert("Invalid PIN or Name"); return; }
         localStorage.setItem("warehouse_authenticated", "true");
         localStorage.setItem("warehouse_staff_name", name);
         location.reload();
@@ -185,165 +175,131 @@
     function logout() { localStorage.clear(); location.reload(); }
 
     function showPage(page) {
-        document.getElementById('dashboard-menu').style.display = 'none';
-        document.getElementById('stock-page').style.display = 'none';
-        document.getElementById('order-page').style.display = 'none';
-        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
-        if (page === 'menu') document.getElementById('dashboard-menu').style.display = 'block';
-        if (page === 'stock') { document.getElementById('stock-page').style.display = 'block'; startScanner(); }
-        if (page === 'order') document.getElementById('order-page').style.display = 'block';
+        document.getElementById('dashboard-menu').style.display='none'; document.getElementById('stock-page').style.display='none'; document.getElementById('order-page').style.display='none';
+        if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
+        if(page==='menu') document.getElementById('dashboard-menu').style.display='block';
+        if(page==='stock') { document.getElementById('stock-page').style.display='block'; startScanner(); }
+        if(page==='order') document.getElementById('order-page').style.display='block';
     }
 
-    function startScanner() {
-        if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
-    }
+    function startScanner() { if(!html5QrCode) html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({facingMode:"environment"}, {fps:10, qrbox:250}, onScanSuccess); }
 
     function onScanSuccess(decodedText) {
-        if (decodedText.length !== 6) return;
         const proceed = () => {
-            document.getElementById('scanner-view').style.display = 'none';
-            document.getElementById('manual-entry-section').style.display = 'none';
-            document.getElementById('controls').style.display = 'block';
-            currentPartId = decodedText;
-            fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${decodedText}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.found) {
-                        currentPartName = data.name; currentStockValue = Number(data.stock);
-                        document.getElementById('item-name').innerText = "✅ " + data.name;
-                        document.getElementById('stock-display').innerText = "Stock: " + data.stock;
-                    } else { alert("Not found"); location.reload(); }
-                });
+            document.getElementById('scanner-view').style.display='none'; document.getElementById('manual-entry-section').style.display='none'; document.getElementById('controls').style.display='block';
+            currentPartId = decodedText; document.getElementById('item-id').innerText = "ID: "+decodedText;
+            fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${decodedText}`).then(res=>res.json()).then(data=>{
+                if(data.found){
+                    currentPartName=data.name; 
+                    currentStockValue=Number(data.stock); 
+                    const display = document.getElementById('stock-display');
+                    
+                    document.getElementById('item-name').innerText="✅ "+data.name; 
+                    display.innerText="Stock: "+data.stock;
+                    
+                    // --- STOCK LEVEL ALERT LOGIC ---
+                    if (currentStockValue <= 0) {
+                        display.style.color = "var(--danger)"; // Red
+                        display.innerText += " (OUT OF STOCK)";
+                    } else if (currentStockValue < 10) {
+                        display.style.color = "var(--warning)"; // Gold/Orange
+                        display.innerText += " (LOW STOCK)";
+                    } else {
+                        display.style.color = "var(--text)"; // Black/Default
+                    }
+                } else { alert("Part Not Found"); location.reload(); }
+            });
         };
-        if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed);
-        else proceed();
+        if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed); else proceed();
     }
 
     function setActionMode(mode) {
         currentAction = mode;
-        document.getElementById('action-selector').style.display = 'none';
-        document.getElementById('movement-form').style.display = 'block';
-        
-        const poSection = document.getElementById('po-link-section');
-        const orderSection = document.getElementById('order-link-section');
-
-        if (mode === 'IN') { 
-            poSection.style.display = 'block'; 
-            orderSection.style.display = 'none'; 
-            isOrderValid = true; 
-        } else { 
-            poSection.style.display = 'none'; 
-            orderSection.style.display = 'block'; 
-            isOrderValid = false; 
-        }
+        document.getElementById('action-selector').style.display='none'; document.getElementById('movement-form').style.display='block';
+        document.getElementById('po-link-section').style.display = mode==='IN' ? 'block':'none';
+        document.getElementById('order-link-section').style.display = mode==='OUT' ? 'block':'none';
+        isOrderValid = (mode==='IN');
     }
 
     function setPOChoice(choice) {
         poChoice = choice;
-        const inputBlock = document.getElementById('po-input-block');
-        const verifyBtn = document.getElementById('po-verify-btn');
-        const msg = document.getElementById('po-msg');
-        inputBlock.style.display = (choice === 'none') ? 'none' : 'block';
-        verifyBtn.style.display = (choice === 'search') ? 'block' : 'none';
-        msg.innerText = "";
-        if (choice === 'none') { isPOValid = true; msg.innerText = "✅ N/A"; msg.style.color = "green"; } 
-        else { isPOValid = (choice === 'new'); }
+        document.getElementById('po-input-block').style.display = choice==='none' ? 'none':'block';
+        document.getElementById('po-description').style.display = choice==='new' ? 'block':'none';
+        document.getElementById('po-search-btns').style.display = choice==='search' ? 'flex':'none';
+        document.getElementById('po-msg').innerText = choice==='none' ? "✅ N/A":"";
+        isPOValid = (choice==='none' || choice==='new');
     }
 
     function verifyPO() {
         const po = document.getElementById('po-number-input').value;
-        if (!po) return;
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=po_search&id=${po}`).then(res => res.json()).then(data => {
-            const msg = document.getElementById('po-msg');
-            if (data.found) { msg.innerText = "✅ PO Found"; msg.style.color = "green"; isPOValid = true; } 
-            else { msg.innerText = "❌ Not found"; msg.style.color = "red"; isPOValid = false; }
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=po_search&id=${po}`).then(res=>res.json()).then(data=>{
+            const m = document.getElementById('po-msg');
+            if(data.found){ m.innerHTML=`✅ Found ${data.count} records.<br>Desc: ${data.description}`; m.style.color="green"; isPOValid=true; }
+            else { m.innerText="❌ No Records Found"; m.style.color="red"; isPOValid=false; }
+        });
+    }
+
+    function listPreviousPOs() {
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=part_po_list&id=${currentPartId}`).then(res=>res.json()).then(data=>{
+            const h = document.getElementById('po-history-list');
+            if(data.list.length>0){ h.innerHTML="<strong>History for this part:</strong><br>"+data.list.join(", "); h.style.display="block"; }
+            else { alert("No history found for this item."); }
         });
     }
 
     function handleReasonChange() {
-        const reason = document.getElementById('removal-reason').value;
-        const block = document.getElementById('order-code-input-block');
-        if (reason === "For Making an Order") { block.style.display = 'block'; isOrderValid = false; } 
-        else { block.style.display = 'none'; isOrderValid = true; }
+        const r = document.getElementById('removal-reason').value;
+        document.getElementById('order-code-input-block').style.display = r==="For Making an Order" ? 'block':'none';
+        isOrderValid = (r!=="For Making an Order");
     }
 
     function verifyOrderForStock() {
         const id = document.getElementById('purpose-order').value;
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`).then(res => res.json()).then(data => {
-            const msg = document.getElementById('order-verify-msg');
-            if (data.found && data.status === "Unfinished") {
-                msg.innerText = "✅ Valid: " + data.customer; msg.style.color = "green"; isOrderValid = true;
-            } else { msg.innerText = "❌ Invalid/Finished"; msg.style.color = "red"; isOrderValid = false; }
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`).then(res=>res.json()).then(data=>{
+            const m = document.getElementById('order-verify-msg');
+            if(data.found && data.status==="Unfinished"){ m.innerText="✅ Valid Order: "+data.customer; m.style.color="green"; isOrderValid=true; }
+            else { m.innerText="❌ Invalid or Finished"; m.style.color="red"; isOrderValid=false; }
         });
     }
 
     function submitFinalData() {
         const qty = Number(document.getElementById('qty').value);
-        if (currentAction === 'IN') {
-            if (poChoice === 'new' && !document.getElementById('po-number-input').value) { alert("Enter PO #"); return; }
-            if (!isPOValid) { alert("Verify PO first"); return; }
-        } else {
-            if (qty > currentStockValue) { alert("Insufficient stock!"); return; }
-            if (!isOrderValid) { alert("Verify order/reason first!"); return; }
+        if(currentAction==='IN'){ 
+            if(poChoice==='new' && !document.getElementById('po-number-input').value){ alert("Please enter PO Number"); return; } 
+            if(!isPOValid){ alert("Please verify PO first"); return; } 
+        } else { 
+            if(qty > currentStockValue){ alert("Insufficient stock available!"); return; } 
+            if(!isOrderValid){ alert("Please verify the order/reason."); return; } 
         }
-        const btn = document.getElementById('final-submit-btn');
-        btn.disabled = true; btn.innerText = "⏳ Recording...";
         
-        let link = "", poVal = "N/A";
-        if (currentAction === 'IN' && poChoice !== 'none') poVal = document.getElementById('po-number-input').value;
-        if (currentAction === 'OUT') {
-            const r = document.getElementById('removal-reason').value;
-            link = (r === "For Making an Order") ? document.getElementById('purpose-order').value : r;
-        }
+        const btn = document.getElementById('final-submit-btn'); btn.disabled=true; btn.innerText="⏳ Recording...";
+        let link="", po="N/A", desc="";
+        if(currentAction==='IN' && poChoice!=='none'){ po=document.getElementById('po-number-input').value; desc=document.getElementById('po-description').value; }
+        if(currentAction==='OUT'){ const r=document.getElementById('removal-reason').value; link=(r==="For Making an Order")?document.getElementById('purpose-order').value:r; }
 
-        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({
-            type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName,
-            action: currentAction, quantity: qty,
-            staffName: localStorage.getItem("warehouse_staff_name"),
-            purpose: document.getElementById('manual-purpose').value, 
-            orderCode: link, poValue: poVal,
-            wasted: (currentAction === 'OUT' && document.getElementById('wasted-check').checked) ? "Yes" : ""
-        })}).then(() => { alert("Saved!"); location.reload(); });
+        fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify({
+            type:"STOCK_MOVE", partId:currentPartId, partName:currentPartName, action:currentAction, quantity:qty,
+            staffName:localStorage.getItem("warehouse_staff_name"), purpose:document.getElementById('manual-purpose').value,
+            orderCode:link, poValue:po, poDescription:desc, wasted: (currentAction==='OUT' && document.getElementById('wasted-check').checked)?"Yes":""
+        })}).then(()=> { alert("Success! Stock Updated."); location.reload(); });
     }
 
     function submitNewOrder() {
-        const customer = document.getElementById('cust-name').value;
-        const product = document.getElementById('order-prod').value;
-        const deadline = document.getElementById('order-deadline').value;
-        if (!customer || !product || !deadline) { alert("Required fields missing"); return; }
-        const btn = document.getElementById('order-submit-btn');
-        btn.disabled = true;
-        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({
-            type: "NEW_ORDER", customer, product, deadline,
-            details: document.getElementById('order-details').value,
-            poNumber: document.getElementById('order-po').value
-        })}).then(res => res.json()).then(data => {
-            alert(`Order Created! Code: ${data.code}`);
-            location.reload();
-        });
+        const c=document.getElementById('cust-name').value, p=document.getElementById('order-prod').value, d=document.getElementById('order-deadline').value;
+        if(!c || !p || !d){ alert("Required fields missing"); return; }
+        const b = document.getElementById('order-submit-btn'); b.disabled=true; b.innerText="⏳ Processing...";
+        fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify({
+            type:"NEW_ORDER", customer:c, product:p, deadline:d, details:document.getElementById('order-details').value, poNumber:document.getElementById('order-po').value
+        })}).then(res=>res.json()).then(data=>{ alert(`Order Created: ${data.code}`); location.reload(); });
     }
 
     function showManual() {
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => {
-                document.getElementById('scanner-view').style.display = 'none';
-                document.getElementById('manual-entry-section').style.display = 'block';
-            });
-        } else {
-            document.getElementById('scanner-view').style.display = 'none';
-            document.getElementById('manual-entry-section').style.display = 'block';
-        }
+        const s = document.getElementById('scanner-view'), m = document.getElementById('manual-entry-section');
+        if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(()=>{ s.style.display='none'; m.style.display='block'; });
+        else { s.style.display='none'; m.style.display='block'; }
     }
-    function showScanner() {
-        document.getElementById('manual-entry-section').style.display = 'none';
-        document.getElementById('scanner-view').style.display = 'block';
-        startScanner();
-    }
-    function handleManualSubmit() {
-        const c = document.getElementById('manual-code-input').value;
-        if (c.length === 6) onScanSuccess(c); else alert("Enter 6 digits");
-    }
+    function showScanner() { document.getElementById('manual-entry-section').style.display='none'; document.getElementById('scanner-view').style.display='block'; startScanner(); }
+    function handleManualSubmit() { const c = document.getElementById('manual-code-input').value; if(c.length===6) onScanSuccess(c); else alert("Enter 6 digits"); }
 </script>
 </body>
 </html>
