@@ -223,6 +223,7 @@
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
 
     let currentPartId="", currentPartName="", currentAction="", html5QrCode;
+    let scannedBatchId = "";
     let isOrderValid=false, currentStockValue=0, isPOValid=false;
 
     window.onload = () => { if(localStorage.getItem("warehouse_authenticated")==="true"){ document.getElementById('login-overlay').style.display='none'; document.getElementById('main-app').style.display='block'; } };
@@ -253,33 +254,49 @@
             document.getElementById('manual-entry-section').style.display = 'none';
             document.getElementById('controls').style.display = 'block';
             
-            // LOGIC: Is this a Batch Code or a simple Part Code?
+            // 1. Detect if it's a Batch QR or a General QR
             const isBatchCode = decodedText.includes('_');
-            const searchId = isBatchCode ? decodedText.split('_')[0] : decodedText;
+            currentPartId = isBatchCode ? decodedText.split('_')[0] : decodedText;
+            scannedBatchId = isBatchCode ? decodedText : ""; // Save for OUT transactions
             
-            currentPartId = searchId;
-            
-            // If it's a batch, auto-fill the Order Code field in the removal form
+            // 2. Determine which backend mode to call
+            const mode = isBatchCode ? "batch_info" : "stock";
+            const fetchId = decodedText; // Send the full string
+    
+            // Pre-fill fields if it's a batch
             if (isBatchCode) {
                 document.getElementById('purpose-order').value = decodedText;
                 document.getElementById('order-verify-msg').innerText = "📦 Batch QR Detected";
                 document.getElementById('order-verify-msg').style.color = "blue";
-                isOrderValid = true; // Pre-verify since the QR is specific
+                isOrderValid = true; 
             }
     
-            fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${searchId}`)
+            fetch(`${GOOGLE_SCRIPT_URL}?mode=${mode}&id=${fetchId}`)
                 .then(res => res.json())
                 .then(data => {
+                    const display = document.getElementById('stock-display');
                     if(data.found) {
                         currentPartName = data.name;
-                        currentStockValue = Number(data.stock);
+                        currentStockValue = Number(data.stock); // This is now strictly the Batch Stock if a batch was scanned
+                        
                         document.getElementById('item-name').innerText = "✅ " + data.name;
-                        document.getElementById('stock-display').innerText = "Stock: " + data.stock;
-                    } else { alert("Not found"); location.reload(); }
+                        
+                        // Display Context
+                        if (isBatchCode) {
+                            display.innerText = "Batch Remaining: " + data.stock;
+                            document.getElementById('item-id').innerText = "Batch: " + decodedText;
+                        } else {
+                            display.innerText = "Total Stock: " + data.stock;
+                            document.getElementById('item-id').innerText = "ID: " + currentPartId;
+                        }
+                        
+                        // Color formatting
+                        display.style.color = currentStockValue < 10 ? "var(--warning)" : "var(--text)";
+                        if(currentStockValue <= 0) { display.style.color = "var(--danger)"; display.innerText += " (EMPTY)"; }
+                    } else { alert("Code not found or batch is empty."); location.reload(); }
                 });
         };
-        if (html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed);
-        else proceed();
+        if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed); else proceed();
     }
 
     function setActionMode(mode) {
@@ -370,50 +387,38 @@
     function submitFinalData() {
         const qty = Number(document.getElementById('qty').value);
         
-        // 1. Validation
-        if (currentAction === 'OUT') {
-            if (qty > currentStockValue) { alert("Insufficient stock!"); return; }
-            if (!isOrderValid) { alert("Verify order or reason first!"); return; }
+        // Validation
+        if(currentAction === 'OUT') {
+            if(qty > currentStockValue) { alert("Not enough stock in this batch/pool!"); return; }
+            if(!isOrderValid) { alert("Verify Order first!"); return; }
         }
     
         const btn = document.getElementById('final-submit-btn');
-        btn.disabled = true; 
-        btn.innerText = "⏳ Recording...";
+        btn.disabled = true; btn.innerText = "⏳ Saving...";
     
-        // 2. Prepare Data
-        const stockingOrderId = (currentAction === 'IN') ? updateCodePreview() : "";
+        // Capture the generated ID for IN, or the scanned Batch ID for OUT
+        const targetStockingId = (currentAction === 'IN') ? updateCodePreview() : scannedBatchId;
+    
         const payload = {
-            type: "STOCK_MOVE",
-            partId: currentPartId,
-            partName: currentPartName,
-            action: currentAction,
-            quantity: qty,
-            staffName: localStorage.getItem("warehouse_staff_name"),
+            type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName, action: currentAction,
+            quantity: qty, staffName: localStorage.getItem("warehouse_staff_name"),
             purpose: document.getElementById('manual-purpose').value,
             orderCode: (currentAction === 'OUT') ? (document.getElementById('removal-reason').value === "For Making an Order" ? document.getElementById('purpose-order').value : document.getElementById('removal-reason').value) : "",
             poValue: (currentAction === 'IN') ? (document.getElementById('check-has-po').checked ? document.getElementById('po-number-input').value : "Temp") : "N/A",
             poDescription: (currentAction === 'IN') ? document.getElementById('po-description').value : "",
-            stockingOrderId: stockingOrderId,
+            stockingOrderId: targetStockingId, // Sends the Batch ID to Column L
             wasted: (currentAction === 'OUT' && document.getElementById('wasted-check').checked) ? "Yes" : ""
         };
     
-        // 3. Send to Google
-        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+        fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) })
         .then(res => {
-            // --- THE FIX IS HERE ---
-            if (currentAction === 'IN' && stockingOrderId !== "N/A") {
-                // Do NOT reload yet. Generate the QR label first.
-                generateLabel(stockingOrderId, currentPartName);
+            if (currentAction === 'IN' && targetStockingId !== "N/A") {
+                generateLabel(targetStockingId, currentPartName);
             } else {
                 alert("Transaction Recorded!");
                 location.reload();
             }
-        })
-        .catch(err => {
-            alert("Error saving data. Please try again.");
-            btn.disabled = false;
-            btn.innerText = "Confirm Transaction";
-        });
+        }).catch(err => { alert("Error saving."); btn.disabled = false; });
     }
     function generateLabel(orderId, partName) {
         const modal = document.getElementById('qr-modal');
