@@ -32,6 +32,12 @@
         .checkbox-container input { width: 22px; height: 22px; margin: 0; }
         .checkbox-container label { margin: 0; font-size: 0.9rem; flex: 1; text-align: left; }
 
+        @media print {
+            body * { visibility: hidden; }
+            #qr-modal, #qr-modal * { visibility: visible; }
+            #qr-modal { position: absolute; left: 0; top: 0; width: 100%; background: white; }
+            .btn-cancel, .btn-unlock { display: none; } /* Hide buttons on the actual print */
+        }
         #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 8px; overflow: hidden; background: #000; }
         .status-msg { font-size: 0.85rem; font-weight: bold; margin: 10px 0; display: block; }
         hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
@@ -325,53 +331,78 @@
 
     function submitFinalData() {
         const qty = Number(document.getElementById('qty').value);
-        if(currentAction==='OUT') {
-            if(qty > currentStockValue) { alert("Not enough stock!"); return; }
-            if(!isOrderValid) { alert("Verify Order first!"); return; }
+        
+        // 1. Validation
+        if (currentAction === 'OUT') {
+            if (qty > currentStockValue) { alert("Insufficient stock!"); return; }
+            if (!isOrderValid) { alert("Verify order or reason first!"); return; }
         }
-
+    
         const btn = document.getElementById('final-submit-btn');
-        btn.disabled = true; btn.innerText = "⏳ Saving...";
-
+        btn.disabled = true; 
+        btn.innerText = "⏳ Recording...";
+    
+        // 2. Prepare Data
+        const stockingOrderId = (currentAction === 'IN') ? updateCodePreview() : "";
         const payload = {
-            type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName, action: currentAction,
-            quantity: qty, staffName: localStorage.getItem("warehouse_staff_name"),
+            type: "STOCK_MOVE",
+            partId: currentPartId,
+            partName: currentPartName,
+            action: currentAction,
+            quantity: qty,
+            staffName: localStorage.getItem("warehouse_staff_name"),
             purpose: document.getElementById('manual-purpose').value,
-            orderCode: (currentAction==='OUT') ? (document.getElementById('removal-reason').value === "For Making an Order" ? document.getElementById('purpose-order').value : document.getElementById('removal-reason').value) : "",
-            poValue: (currentAction==='IN') ? (document.getElementById('check-has-po').checked ? document.getElementById('po-number-input').value : "Temp") : "N/A",
-            poDescription: (currentAction==='IN') ? document.getElementById('po-description').value : "",
-            stockingOrderId: (currentAction==='IN') ? updateCodePreview() : "",
-            wasted: (currentAction==='OUT' && document.getElementById('wasted-check').checked) ? "Yes" : ""
+            orderCode: (currentAction === 'OUT') ? (document.getElementById('removal-reason').value === "For Making an Order" ? document.getElementById('purpose-order').value : document.getElementById('removal-reason').value) : "",
+            poValue: (currentAction === 'IN') ? (document.getElementById('check-has-po').checked ? document.getElementById('po-number-input').value : "Temp") : "N/A",
+            poDescription: (currentAction === 'IN') ? document.getElementById('po-description').value : "",
+            stockingOrderId: stockingOrderId,
+            wasted: (currentAction === 'OUT' && document.getElementById('wasted-check').checked) ? "Yes" : ""
         };
-
+    
+        // 3. Send to Google
         fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
-        .then(() => {
-            if (currentAction === 'IN' && payload.stockingOrderId !== "N/A") {
-                generateLabel(payload.stockingOrderId, payload.partName);
+        .then(res => {
+            // --- THE FIX IS HERE ---
+            if (currentAction === 'IN' && stockingOrderId !== "N/A") {
+                // Do NOT reload yet. Generate the QR label first.
+                generateLabel(stockingOrderId, currentPartName);
             } else {
-                alert("Transaction Recorded Successfully!");
+                alert("Transaction Recorded!");
                 location.reload();
             }
+        })
+        .catch(err => {
+            alert("Error saving data. Please try again.");
+            btn.disabled = false;
+            btn.innerText = "Confirm Transaction";
         });
     }
-
     function generateLabel(orderId, partName) {
-        // Show the modal
-        document.getElementById('qr-modal').style.display = 'flex';
-        document.getElementById('label-text').innerText = `${partName}\nID: ${orderId}`;
+        const modal = document.getElementById('qr-modal');
+        const canvas = document.getElementById('qrcode-canvas');
+        
+        // Ensure modal is visible before drawing QR
+        modal.style.display = 'flex';
+        canvas.innerHTML = ""; // Clear old QR
     
-        // Clear previous QR if any
-        document.getElementById('qrcode-canvas').innerHTML = "";
-    
-        // Generate new QR
-        new QRCode(document.getElementById("qrcode-canvas"), {
-            text: orderId,
-            width: 180,
-            height: 180,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
+        try {
+            new QRCode(canvas, {
+                text: orderId,
+                width: 200,
+                height: 200,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+            
+            document.getElementById('label-text').innerHTML = `
+                <strong style="font-size:1.2rem;">${partName}</strong><br>
+                <span style="color:#666;">Batch ID: ${orderId}</span>
+            `;
+        } catch (e) {
+            console.error("QR Generation Failed:", e);
+            alert("Data saved, but QR generation failed. ID: " + orderId);
+        }
     }
     
     function submitNewOrder() {
