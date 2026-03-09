@@ -104,39 +104,41 @@
                 <input type="text" id="manual-purpose" placeholder="Notes (Internal)">
 
                 <div id="po-link-section" style="display:none;" class="sub-section">
-                <label>📦 Stocking Order Configuration</label>
+                    <label>📦 Addition Scenario</label>
+                    <select id="addition-scenario" onchange="toggleScenario()">
+                        <option value="general">General Pool (No PO/Contract)</option>
+                        <option value="contract">Contract / PO Tracked Order</option>
+                    </select>
                 
-                <div style="text-align: left; margin: 10px auto; width: 90%;">
-                    <div class="checkbox-container" style="background: #eefbff; border: 1px solid #bee5eb;">
-                        <input type="checkbox" id="check-has-po" onchange="togglePOInput()">
-                        <label for="check-has-po" style="margin:0;">PO/Contract Available?</label>
-                    </div>
-                    
-                    <div class="checkbox-container" style="background: #fff9e6; border: 1px solid #ffeeba;">
-                        <input type="checkbox" id="check-batches" onchange="toggleBatchInput()">
-                        <label for="check-batches" style="margin:0;">Delivered in Batches?</label>
-                    </div>
-            
-                    <div class="checkbox-container" style="background: #f3f3f3; border: 1px solid #ddd;">
-                        <input type="checkbox" id="check-shared-po">
-                        <label for="check-shared-po" style="margin:0;">Share PO with other parts?</label>
-                    </div>
-                </div>
-            
-                <div id="po-number-block" style="display:none;">
-                    <label>PO / Contract Number:</label>
-                    <input type="text" id="po-number-input" placeholder="Enter PO #">
-                </div>
-            
-                <div id="batch-number-block" style="display:none;">
-                    <label>Batch / Lot Number:</label>
-                    <input type="number" id="batch-number-input" placeholder="e.g. 1" value="1">
-                </div>
+                    <div id="contract-logic-block" style="display:none;">
+                        <hr>
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="check-has-po" onchange="updateCodePreview()">
+                            <label for="check-has-po">PO/Contract Available?</label>
+                        </div>
+                        
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="check-batches" onchange="toggleBatchSection()">
+                            <label for="check-batches">Delivered in Batches?</label>
+                        </div>
                 
-                <p id="code-preview" style="font-size: 0.8rem; color: #666; font-style: italic; margin-top:10px;">
-                    Order Code Preview: [Scan a part first]
-                </p>
-            </div>
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="check-shared-po" onchange="updateCodePreview()">
+                            <label for="check-shared-po">Share PO with other parts?</label>
+                        </div>
+                
+                        <div class="btn-group-inline">
+                            <button type="button" class="btn-toggle" style="background:var(--purple);" onclick="searchSharedPOs()">🔍 Search Shared POs</button>
+                            <button id="batch-search-btn" type="button" class="btn-toggle" style="background:#444; display:none;" onclick="searchBatches()">🔍 Find Batches</button>
+                        </div>
+                
+                        <input type="text" id="po-number-input" placeholder="PO Number (or 'Temp')">
+                        <input type="number" id="batch-number-input" placeholder="Batch #" value="1" style="display:none;">
+                        
+                        <p id="code-preview" style="font-size: 0.75rem; color: #666; margin-top:10px;"></p>
+                        <div id="search-results-list" style="font-size:0.8rem; background:#eee; border-radius:8px; display:none; padding:10px; margin-top:10px;"></div>
+                    </div>
+                </div>
 
                 <div id="order-link-section" style="display:none;">
                     <label>Reason for Removal:</label>
@@ -255,23 +257,62 @@
         document.getElementById('batch-number-block').style.display = isBatched ? 'block' : 'none';
         updateCodePreview();
     }
+
+    function toggleScenario() {
+        const scenario = document.getElementById('addition-scenario').value;
+        document.getElementById('contract-logic-block').style.display = (scenario === 'contract') ? 'block' : 'none';
+        updateCodePreview();
+    }
+    
+    function toggleBatchSection() {
+        const isBatched = document.getElementById('check-batches').checked;
+        document.getElementById('batch-number-input').style.display = isBatched ? 'block' : 'none';
+        document.getElementById('batch-search-btn').style.display = isBatched ? 'block' : 'none';
+        updateCodePreview();
+    }
     
     // Update the preview text as the user types/clicks
     function updateCodePreview() {
-        if (!currentPartId) return;
+        const scenario = document.getElementById('addition-scenario').value;
+        const preview = document.getElementById('code-preview');
         
+        if (scenario === 'general') {
+            preview.innerText = "Order ID: N/A (General Pool)";
+            return "N/A";
+        }
+    
         const hasPO = document.getElementById('check-has-po').checked;
-        const poNum = document.getElementById('po-number-input').value || "Temp";
-        
+        const po = hasPO ? (document.getElementById('po-number-input').value || "PO_PENDING") : "Temp";
+        const shared = document.getElementById('check-shared-po').checked ? "SHARED" : "UNIQUE";
         const isBatched = document.getElementById('check-batches').checked;
-        const batchNum = document.getElementById('batch-number-input').value || "1";
-        
-        const finalPO = hasPO ? poNum : "Temp";
-        const finalBatch = isBatched ? `B${batchNum}` : "Single";
-        
-        const generatedCode = `${currentPartId}_${finalPO}_${finalBatch}`;
-        document.getElementById('code-preview').innerText = "Order Code Preview: " + generatedCode;
-        return generatedCode;
+        const batch = isBatched ? ("B" + document.getElementById('batch-number-input').value) : "Single";
+    
+        const code = `${currentPartId}_${po}_${shared}_${batch}`;
+        preview.innerText = "Order ID: " + code;
+        return code;
+    }
+
+    function searchBatches() {
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=batch_lookup&partId=${currentPartId}`)
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById('search-results-list');
+                list.style.display = "block";
+                if (data.results.length > 0) {
+                    let html = "<strong>Existing Batches for this Part:</strong><ul style='padding-left:20px;'>";
+                    data.results.forEach(item => {
+                        html += `<li>${item.code} <small>(${item.qty} units)</small></li>`;
+                    });
+                    list.innerHTML = html + "</ul>";
+                } else { list.innerHTML = "No existing batches found."; }
+            });
+    }
+    
+    function applySearchResult(po) {
+        document.getElementById('check-has-po').checked = true;
+        document.getElementById('po-number-input').value = po;
+        document.getElementById('po-number-block').style.display = 'block';
+        updateCodePreview();
     }
     
     // Attach listeners to update preview on typing
