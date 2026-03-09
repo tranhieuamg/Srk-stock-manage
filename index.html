@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>Warehouse Pro v3</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --warning: #d39e00; --purple: #6f42c1; --bg: #f4f7f6; --text: #333; }
         body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; background: var(--bg); color: var(--text); }
@@ -381,28 +381,36 @@
         const modal = document.getElementById('qr-modal');
         const canvas = document.getElementById('qrcode-canvas');
         
-        // Ensure modal is visible before drawing QR
+        // 1. Show the modal first
         modal.style.display = 'flex';
         canvas.innerHTML = ""; // Clear old QR
     
-        try {
-            new QRCode(canvas, {
-                text: orderId,
-                width: 200,
-                height: 200,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-            
-            document.getElementById('label-text').innerHTML = `
-                <strong style="font-size:1.2rem;">${partName}</strong><br>
-                <span style="color:#666;">Batch ID: ${orderId}</span>
-            `;
-        } catch (e) {
-            console.error("QR Generation Failed:", e);
-            alert("Data saved, but QR generation failed. ID: " + orderId);
-        }
+        // 2. Add a tiny delay (100ms) to ensure the 'canvas' div is active in the DOM
+        setTimeout(() => {
+            try {
+                // 3. Double check library exists
+                if (typeof QRCode === "undefined") {
+                    throw new Error("QRCode library not loaded");
+                }
+    
+                new QRCode(canvas, {
+                    text: orderId,
+                    width: 180,
+                    height: 180,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+                
+                document.getElementById('label-text').innerHTML = `
+                    <strong style="font-size:1.2rem;">${partName}</strong><br>
+                    <span style="color:#666;">Batch ID: ${orderId}</span>
+                `;
+            } catch (e) {
+                console.error("QR Generation Error:", e);
+                alert("⚠️ Stock saved to Sheet, but QR could not be drawn.\nBatch ID: " + orderId);
+            }
+        }, 100);
     }
     
     function submitNewOrder() {
