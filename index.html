@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>Warehouse Pro v3</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.min.js"></script>
     <style>
         :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --warning: #d39e00; --purple: #6f42c1; --bg: #f4f7f6; --text: #333; }
         body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; background: var(--bg); color: var(--text); }
@@ -163,6 +164,15 @@
         </div>
     </div>
 </div>
+    <div id="qr-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center;">
+        <div style="background:white; padding:20px; border-radius:12px; width:85%; max-width:350px;">
+            <h3 style="margin-top:0;">Print Label</h3>
+            <div id="qrcode-canvas" style="display:flex; justify-content:center; margin:20px 0;"></div>
+            <p id="label-text" style="font-size:0.9rem; font-weight:bold; word-break:break-all;"></p>
+            <button class="btn-unlock" onclick="window.print()">🖨️ Print / Save</button>
+            <button class="btn-cancel" onclick="location.reload()">Done / Close</button>
+        </div>
+    </div>
 
 <script>
     const MY_M_K = "100110"; 
@@ -193,22 +203,39 @@
 
     function startScanner() { if(!html5QrCode) html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({facingMode:"environment"}, {fps:10, qrbox:250}, onScanSuccess); }
 
-    function onScanSuccess(code) {
+    function onScanSuccess(decodedText) {
         const proceed = () => {
-            document.getElementById('scanner-view').style.display='none'; document.getElementById('manual-entry-section').style.display='none'; document.getElementById('controls').style.display='block';
-            currentPartId = code;
-            fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${code}`).then(res=>res.json()).then(data=>{
-                const display = document.getElementById('stock-display');
-                if(data.found){
-                    currentPartName=data.name; currentStockValue=Number(data.stock);
-                    document.getElementById('item-name').innerText="✅ "+data.name;
-                    display.innerText="Stock: "+data.stock;
-                    display.style.color = currentStockValue < 10 ? "var(--warning)" : "var(--text)";
-                    if(currentStockValue <= 0) { display.style.color="var(--danger)"; display.innerText="OUT OF STOCK"; }
-                } else { alert("Part Not Found"); location.reload(); }
-            });
+            document.getElementById('scanner-view').style.display = 'none';
+            document.getElementById('manual-entry-section').style.display = 'none';
+            document.getElementById('controls').style.display = 'block';
+            
+            // LOGIC: Is this a Batch Code or a simple Part Code?
+            const isBatchCode = decodedText.includes('_');
+            const searchId = isBatchCode ? decodedText.split('_')[0] : decodedText;
+            
+            currentPartId = searchId;
+            
+            // If it's a batch, auto-fill the Order Code field in the removal form
+            if (isBatchCode) {
+                document.getElementById('purpose-order').value = decodedText;
+                document.getElementById('order-verify-msg').innerText = "📦 Batch QR Detected";
+                document.getElementById('order-verify-msg').style.color = "blue";
+                isOrderValid = true; // Pre-verify since the QR is specific
+            }
+    
+            fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${searchId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.found) {
+                        currentPartName = data.name;
+                        currentStockValue = Number(data.stock);
+                        document.getElementById('item-name').innerText = "✅ " + data.name;
+                        document.getElementById('stock-display').innerText = "Stock: " + data.stock;
+                    } else { alert("Not found"); location.reload(); }
+                });
         };
-        if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed); else proceed();
+        if (html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed);
+        else proceed();
     }
 
     function setActionMode(mode) {
@@ -317,9 +344,36 @@
             wasted: (currentAction==='OUT' && document.getElementById('wasted-check').checked) ? "Yes" : ""
         };
 
-        fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) }).then(()=> { alert("Saved!"); location.reload(); });
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+        .then(() => {
+            if (currentAction === 'IN' && payload.stockingOrderId !== "N/A") {
+                generateLabel(payload.stockingOrderId, payload.partName);
+            } else {
+                alert("Transaction Recorded Successfully!");
+                location.reload();
+            }
+        });
     }
 
+    function generateLabel(orderId, partName) {
+        // Show the modal
+        document.getElementById('qr-modal').style.display = 'flex';
+        document.getElementById('label-text').innerText = `${partName}\nID: ${orderId}`;
+    
+        // Clear previous QR if any
+        document.getElementById('qrcode-canvas').innerHTML = "";
+    
+        // Generate new QR
+        new QRCode(document.getElementById("qrcode-canvas"), {
+            text: orderId,
+            width: 180,
+            height: 180,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    }
+    
     function submitNewOrder() {
         const c=document.getElementById('cust-name').value, p=document.getElementById('order-prod').value, d=document.getElementById('order-deadline').value;
         if(!c || !p || !d){ alert("Required fields missing"); return; }
