@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Warehouse Pro</title>
+    <title>Warehouse Pro v3</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --warning: #d39e00; --purple: #6f42c1; --bg: #f4f7f6; --text: #333; }
@@ -11,10 +11,7 @@
         
         select, input, textarea { width: 95%; max-width: 400px; padding: 15px; margin: 10px auto; font-size: 1.1rem; border-radius: 8px; border: 1px solid #ccc; background: white; box-sizing: border-box; display: block; }
         
-        .logo-container { width: 100%; text-align: center; padding: 10px 0; }
-        .app-logo { max-width: 150px; height: auto; display: block; margin: 0 auto; }
         .sub-section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 20px auto; max-width: 450px; }
-        
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         
         button { padding: 15px; font-size: 1rem; font-weight: bold; cursor: pointer; color: white; border: none; border-radius: 8px; transition: 0.2s; display: block; margin: 10px auto; width: 95%; max-width: 400px; }
@@ -24,70 +21,61 @@
         .btn-add { background: var(--success); }
         .btn-remove { background: var(--danger); }
         .btn-toggle { background: #6c757d; }
-        .btn-order { background: var(--purple); }
+        .btn-purple { background: var(--purple); }
         .btn-cancel { background: #666; }
         
         .btn-group-inline { display: flex; gap: 10px; width: 95%; max-width: 400px; margin: 10px auto; }
-        .btn-group-inline button { flex: 1; margin: 0; width: auto; font-size: 0.8rem; }
-        #po-history-list li {
-            font-size: 0.85rem;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 3px;
-        }
-        #po-history-list li:last-child {
-            border-bottom: none;
-        }
-        .checkbox-container { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 15px auto; background: #fff3f3; padding: 10px; border-radius: 8px; width: 95%; max-width: 400px; border: 1px dashed var(--danger); }
-        #wasted-check { width: 20px; height: 20px; margin: 0; }
+        .btn-group-inline button { flex: 1; margin: 0; width: auto; font-size: 0.75rem; padding: 10px 5px; }
         
+        .checkbox-container { display: flex; align-items: center; justify-content: flex-start; gap: 10px; margin: 10px auto; padding: 12px; border-radius: 8px; width: 95%; max-width: 400px; box-sizing: border-box; border: 1px solid #ddd; }
+        .checkbox-container input { width: 22px; height: 22px; margin: 0; }
+        .checkbox-container label { margin: 0; font-size: 0.9rem; flex: 1; text-align: left; }
+
         #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 8px; overflow: hidden; background: #000; }
-        .status-msg { font-size: 0.9rem; font-weight: bold; margin: 10px 0; display: block; }
+        .status-msg { font-size: 0.85rem; font-weight: bold; margin: 10px 0; display: block; }
         hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
-        label { font-weight: bold; display: block; margin-top: 15px; font-size: 0.9rem; }
+        .preview-box { font-size: 0.75rem; color: #555; background: #e9ecef; padding: 8px; border-radius: 4px; margin-top: 10px; word-break: break-all; }
+        .search-results { font-size: 0.8rem; background: #fff; border: 1px solid #ddd; border-radius: 8px; text-align: left; padding: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
 <div id="login-overlay">
-    <div class="logo-container"><img src="logo.png" alt="Logo" class="app-logo"></div>
     <h2>System Access</h2>
     <select id="staff-name">
-        <option value="" disabled selected>Select Staff Name</option>
+        <option value="" disabled selected>Select Staff</option>
         <option value="Hieu">Hieu</option>
         <option value="Trung">Trung</option>
         <option value="Cuong">Cuong</option>
         <option value="Vinh">Vinh</option>
     </select>
-    <input type="password" id="pin-input" pattern="\d*" inputmode="numeric" placeholder="Enter PIN">
+    <input type="password" id="pin-input" placeholder="Enter PIN">
     <button class="btn-unlock" onclick="checkPin()">Unlock System</button>
 </div>
 
 <div id="main-app" style="display:none;">
     <div id="dashboard-menu">
-        <div class="logo-container"><img src="logo.png" alt="Logo" class="app-logo"></div>
         <h2>Dashboard</h2>
         <button class="btn-unlock" onclick="showPage('stock')">📦 Stock Management</button>
-        <button class="btn-order" onclick="showPage('order')">📝 Order Management</button>
-        <p onclick="logout()" style="color:grey; text-decoration:underline; margin-top:40px; cursor:pointer;">Log out</p>
+        <button class="btn-purple" onclick="showPage('order')">📝 Order Management</button>
+        <p onclick="logout()" style="color:grey; text-decoration:underline; cursor:pointer;">Log out</p>
     </div>
 
     <div id="stock-page" style="display:none;">
-        <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Dashboard</button>
+        <button class="btn-toggle" onclick="showPage('menu')">⬅ Back</button>
         <div id="scanner-view">
-            <h2>Scan Part QR</h2>
             <div id="reader"></div>
-            <button class="btn-toggle" onclick="showManual()">⌨️ Type Code Manually</button>
+            <button class="btn-toggle" onclick="showManual()">⌨️ Manual Code</button>
         </div>
         <div id="manual-entry-section" style="display:none;">
             <input type="number" id="manual-code-input" placeholder="6-Digit Part Code">
             <button class="btn-unlock" onclick="handleManualSubmit()">Find Part</button>
-            <button class="btn-toggle" onclick="showScanner()">📷 Use Camera</button>
+            <button class="btn-toggle" onclick="showScanner()">📷 Scanner</button>
         </div>
 
         <div id="controls" class="sub-section" style="display:none;">
             <h3 id="item-name">Checking...</h3>
-            <p id="item-id" style="color: #666; font-size: 0.8rem;"></p>
-            <p id="stock-display" style="font-weight: bold; font-size: 1.4rem; padding: 10px;"></p>
+            <p id="stock-display" style="font-weight: bold; font-size: 1.3rem;"></p>
             <hr>
             <div id="action-selector">
                 <div class="btn-group-inline">
@@ -97,67 +85,65 @@
             </div>
 
             <div id="movement-form" style="display:none;">
-                <h4 id="form-title">Moving Stock</h4>
                 <label>Quantity:</label>
                 <input type="number" id="qty" value="1" min="1">
-                <label>Purpose:</label>
                 <input type="text" id="manual-purpose" placeholder="Notes (Internal)">
 
-                <div id="po-link-section" style="display:none;" class="sub-section">
-                    <label>📦 Addition Scenario</label>
+                <div id="po-link-section" style="display:none;">
+                    <label>Addition Scenario:</label>
                     <select id="addition-scenario" onchange="toggleScenario()">
-                        <option value="general">General Pool (No PO/Contract)</option>
+                        <option value="general">General Pool (No Tracking)</option>
                         <option value="contract">Contract / PO Tracked Order</option>
                     </select>
-                
+
                     <div id="contract-logic-block" style="display:none;">
-                        <hr>
                         <div class="checkbox-container">
-                            <input type="checkbox" id="check-has-po" onchange="updateCodePreview()">
+                            <input type="checkbox" id="check-has-po" onchange="togglePOInput()">
                             <label for="check-has-po">PO/Contract Available?</label>
                         </div>
-                        
                         <div class="checkbox-container">
                             <input type="checkbox" id="check-batches" onchange="toggleBatchSection()">
                             <label for="check-batches">Delivered in Batches?</label>
                         </div>
-                
                         <div class="checkbox-container">
                             <input type="checkbox" id="check-shared-po" onchange="updateCodePreview()">
                             <label for="check-shared-po">Share PO with other parts?</label>
                         </div>
-                
+
                         <div class="btn-group-inline">
-                            <button type="button" class="btn-toggle" style="background:var(--purple);" onclick="searchSharedPOs()">🔍 Search Shared POs</button>
-                            <button id="batch-search-btn" type="button" class="btn-toggle" style="background:#444; display:none;" onclick="searchBatches()">🔍 Find Batches</button>
+                            <button type="button" class="btn-purple" onclick="searchSharedPOs()">🔍 Shared POs</button>
+                            <button id="batch-search-btn" type="button" class="btn-toggle" style="display:none;" onclick="searchBatches()">🔍 Batches</button>
                         </div>
-                
-                        <input type="text" id="po-number-input" placeholder="PO Number (or 'Temp')">
-                        <input type="number" id="batch-number-input" placeholder="Batch #" value="1" style="display:none;">
+
+                        <div id="po-input-block" style="display:none;">
+                            <input type="text" id="po-number-input" placeholder="PO Number" oninput="updateCodePreview()">
+                            <input type="text" id="po-description" placeholder="PO Description">
+                        </div>
+                        <input type="number" id="batch-number-input" placeholder="Batch #" value="1" style="display:none;" oninput="updateCodePreview()">
                         
-                        <p id="code-preview" style="font-size: 0.75rem; color: #666; margin-top:10px;"></p>
-                        <div id="search-results-list" style="font-size:0.8rem; background:#eee; border-radius:8px; display:none; padding:10px; margin-top:10px;"></div>
+                        <div id="code-preview" class="preview-box">Order ID: N/A</div>
+                        <div id="search-results-list" class="search-results" style="display:none;"></div>
                     </div>
                 </div>
 
                 <div id="order-link-section" style="display:none;">
-                    <label>Reason for Removal:</label>
                     <select id="removal-reason" onchange="handleReasonChange()">
-                        <option value="" disabled selected>Select reason...</option>
+                        <option value="" disabled selected>Reason for Removal...</option>
                         <option value="For Testing">For Testing</option>
                         <option value="For Post Processing">For Post Processing</option>
                         <option value="For Making an Order">For Making an Order</option>
                     </select>
                     <div id="order-code-input-block" style="display:none;">
-                        <input type="number" id="purpose-order" placeholder="Order Code">
+                        <input type="number" id="purpose-order" placeholder="6-digit Order Code">
                         <button type="button" class="btn-toggle" onclick="verifyOrderForStock()">Verify Order</button>
                         <p id="order-verify-msg" class="status-msg"></p>
                         <div class="checkbox-container">
                             <input type="checkbox" id="wasted-check">
-                            <label for="wasted-check" style="color:var(--danger); margin:0;">Wasted in assembly?</label>
+                            <label for="wasted-check" style="color:var(--danger);">Wasted in assembly?</label>
                         </div>
                     </div>
                 </div>
+
                 <button id="final-submit-btn" class="btn-unlock" onclick="submitFinalData()">Confirm Transaction</button>
             </div>
             <button class="btn-cancel" onclick="location.reload()">Cancel</button>
@@ -165,12 +151,11 @@
     </div>
 
     <div id="order-page" style="display:none;">
-        <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Dashboard</button>
+        <button class="btn-toggle" onclick="showPage('menu')">⬅ Back</button>
         <div class="sub-section">
-            <h3>New Order</h3>
+            <h3>New Order Registration</h3>
             <input type="text" id="cust-name" placeholder="Customer Name *">
             <input type="text" id="order-prod" placeholder="Product Model *">
-            <textarea id="order-details" placeholder="Details"></textarea>
             <input type="text" id="order-po" placeholder="PO # (Optional)">
             <label>Deadline *</label>
             <input type="date" id="order-deadline">
@@ -184,17 +169,16 @@
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
 
     let currentPartId="", currentPartName="", currentAction="", html5QrCode;
-    let isOrderValid=false, isPOValid=false, currentStockValue=0, poChoice="";
+    let isOrderValid=false, currentStockValue=0, isPOValid=false;
 
     window.onload = () => { if(localStorage.getItem("warehouse_authenticated")==="true"){ document.getElementById('login-overlay').style.display='none'; document.getElementById('main-app').style.display='block'; } };
 
     function checkPin() {
-        const pin = document.getElementById('pin-input').value;
-        const name = document.getElementById('staff-name').value;
-        if (!name || pin !== MY_M_K) { alert("Invalid PIN or Name"); return; }
-        localStorage.setItem("warehouse_authenticated", "true");
-        localStorage.setItem("warehouse_staff_name", name);
-        location.reload();
+        if (document.getElementById('pin-input').value === MY_M_K) {
+            localStorage.setItem("warehouse_authenticated", "true");
+            localStorage.setItem("warehouse_staff_name", document.getElementById('staff-name').value);
+            location.reload();
+        } else alert("Wrong PIN");
     }
 
     function logout() { localStorage.clear(); location.reload(); }
@@ -209,29 +193,18 @@
 
     function startScanner() { if(!html5QrCode) html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({facingMode:"environment"}, {fps:10, qrbox:250}, onScanSuccess); }
 
-    function onScanSuccess(decodedText) {
+    function onScanSuccess(code) {
         const proceed = () => {
             document.getElementById('scanner-view').style.display='none'; document.getElementById('manual-entry-section').style.display='none'; document.getElementById('controls').style.display='block';
-            currentPartId = decodedText; document.getElementById('item-id').innerText = "ID: "+decodedText;
-            fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${decodedText}`).then(res=>res.json()).then(data=>{
+            currentPartId = code;
+            fetch(`${GOOGLE_SCRIPT_URL}?mode=stock&id=${code}`).then(res=>res.json()).then(data=>{
+                const display = document.getElementById('stock-display');
                 if(data.found){
-                    currentPartName=data.name; 
-                    currentStockValue=Number(data.stock); 
-                    const display = document.getElementById('stock-display');
-                    
-                    document.getElementById('item-name').innerText="✅ "+data.name; 
+                    currentPartName=data.name; currentStockValue=Number(data.stock);
+                    document.getElementById('item-name').innerText="✅ "+data.name;
                     display.innerText="Stock: "+data.stock;
-                    
-                    // --- STOCK LEVEL ALERT LOGIC ---
-                    if (currentStockValue <= 0) {
-                        display.style.color = "var(--danger)"; // Red
-                        display.innerText += " (OUT OF STOCK)";
-                    } else if (currentStockValue < 10) {
-                        display.style.color = "var(--warning)"; // Gold/Orange
-                        display.innerText += " (LOW STOCK)";
-                    } else {
-                        display.style.color = "var(--text)"; // Black/Default
-                    }
+                    display.style.color = currentStockValue < 10 ? "var(--warning)" : "var(--text)";
+                    if(currentStockValue <= 0) { display.style.color="var(--danger)"; display.innerText="OUT OF STOCK"; }
                 } else { alert("Part Not Found"); location.reload(); }
             });
         };
@@ -243,154 +216,71 @@
         document.getElementById('action-selector').style.display='none'; document.getElementById('movement-form').style.display='block';
         document.getElementById('po-link-section').style.display = mode==='IN' ? 'block':'none';
         document.getElementById('order-link-section').style.display = mode==='OUT' ? 'block':'none';
-        isOrderValid = (mode==='IN');
     }
 
-    function togglePOInput() {
-        const hasPO = document.getElementById('check-has-po').checked;
-        document.getElementById('po-number-block').style.display = hasPO ? 'block' : 'none';
-        updateCodePreview();
-    }
-    
-    function toggleBatchInput() {
-        const isBatched = document.getElementById('check-batches').checked;
-        document.getElementById('batch-number-block').style.display = isBatched ? 'block' : 'none';
-        updateCodePreview();
-    }
-
+    // --- INBOUND (ADD) LOGIC ---
     function toggleScenario() {
         const scenario = document.getElementById('addition-scenario').value;
         document.getElementById('contract-logic-block').style.display = (scenario === 'contract') ? 'block' : 'none';
         updateCodePreview();
     }
-    
+
+    function togglePOInput() {
+        document.getElementById('po-input-block').style.display = document.getElementById('check-has-po').checked ? 'block' : 'none';
+        updateCodePreview();
+    }
+
     function toggleBatchSection() {
         const isBatched = document.getElementById('check-batches').checked;
         document.getElementById('batch-number-input').style.display = isBatched ? 'block' : 'none';
         document.getElementById('batch-search-btn').style.display = isBatched ? 'block' : 'none';
         updateCodePreview();
     }
-    
-    // Update the preview text as the user types/clicks
+
     function updateCodePreview() {
         const scenario = document.getElementById('addition-scenario').value;
         const preview = document.getElementById('code-preview');
+        if (scenario === 'general') { preview.innerText = "Order ID: N/A"; return "N/A"; }
+
+        const po = document.getElementById('check-has-po').checked ? (document.getElementById('po-number-input').value || "PO_PENDING") : "Temp";
+        const share = document.getElementById('check-shared-po').checked ? "SHARED" : "UNIQUE";
+        const batch = document.getElementById('check-batches').checked ? ("B" + document.getElementById('batch-number-input').value) : "Single";
         
-        if (scenario === 'general') {
-            preview.innerText = "Order ID: N/A (General Pool)";
-            return "N/A";
-        }
-    
-        const hasPO = document.getElementById('check-has-po').checked;
-        const po = hasPO ? (document.getElementById('po-number-input').value || "PO_PENDING") : "Temp";
-        const shared = document.getElementById('check-shared-po').checked ? "SHARED" : "UNIQUE";
-        const isBatched = document.getElementById('check-batches').checked;
-        const batch = isBatched ? ("B" + document.getElementById('batch-number-input').value) : "Single";
-    
-        const code = `${currentPartId}_${po}_${shared}_${batch}`;
+        const code = `${currentPartId}_${po}_${share}_${batch}`;
         preview.innerText = "Order ID: " + code;
         return code;
     }
 
-    function searchBatches() {
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=batch_lookup&partId=${currentPartId}`)
-            .then(res => res.json())
-            .then(data => {
-                const list = document.getElementById('search-results-list');
-                list.style.display = "block";
-                if (data.results.length > 0) {
-                    let html = "<strong>Existing Batches for this Part:</strong><ul style='padding-left:20px;'>";
-                    data.results.forEach(item => {
-                        html += `<li>${item.code} <small>(${item.qty} units)</small></li>`;
-                    });
-                    list.innerHTML = html + "</ul>";
-                } else { list.innerHTML = "No existing batches found."; }
-            });
+    function searchSharedPOs() {
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=search_shared_po`).then(res=>res.json()).then(data=>{
+            const list = document.getElementById('search-results-list');
+            list.style.display = "block";
+            if(data.results.length > 0) {
+                let html = "<strong>Shared POs Found:</strong><ul>";
+                data.results.forEach(i => { html += `<li onclick="applyPO('${i.po}')" style="color:var(--purple); cursor:pointer; margin-bottom:8px;">${i.po} <br><small>${i.desc}</small></li>`; });
+                list.innerHTML = html + "</ul>";
+            } else list.innerHTML = "No shared POs found.";
+        });
     }
-    
-    function applySearchResult(po) {
+
+    function applyPO(po) {
         document.getElementById('check-has-po').checked = true;
         document.getElementById('po-number-input').value = po;
-        document.getElementById('po-number-block').style.display = 'block';
+        document.getElementById('po-input-block').style.display = 'block';
         updateCodePreview();
     }
-    
-    // Attach listeners to update preview on typing
-    document.getElementById('po-number-input').addEventListener('input', updateCodePreview);
-    document.getElementById('batch-number-input').addEventListener('input', updateCodePreview);
-    
-    function setPOChoice(choice) {
-        poChoice = choice;
-        document.getElementById('po-input-block').style.display = choice==='none' ? 'none':'block';
-        document.getElementById('po-description').style.display = choice==='new' ? 'block':'none';
-        document.getElementById('po-search-btns').style.display = choice==='search' ? 'flex':'none';
-        document.getElementById('po-msg').innerText = choice==='none' ? "✅ N/A":"";
-        isPOValid = (choice==='none' || choice==='new');
-    }
 
-    function verifyPO() {
-        const po = document.getElementById('po-number-input').value;
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=po_search&id=${po}`).then(res=>res.json()).then(data=>{
-            const m = document.getElementById('po-msg');
-            if(data.found){ m.innerHTML=`✅ Found ${data.count} records.<br>Desc: ${data.description}`; m.style.color="green"; isPOValid=true; }
-            else { m.innerText="❌ No Records Found"; m.style.color="red"; isPOValid=false; }
+    function searchBatches() {
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=batch_lookup&partId=${currentPartId}`).then(res=>res.json()).then(data=>{
+            const list = document.getElementById('search-results-list');
+            list.style.display = "block";
+            if(data.results.length > 0) {
+                list.innerHTML = "<strong>Existing Batches:</strong><br>" + data.results.map(i => i.code).join("<br>");
+            } else list.innerHTML = "No existing batches for this part.";
         });
     }
 
-    function listPreviousPOs() {
-    const historyDiv = document.getElementById('po-history-list');
-    
-    // Safety check: is a part scanned?
-    if (!currentPartId) {
-        alert("Please scan a part first.");
-        return;
-    }
-
-    historyDiv.innerHTML = "⏳ Loading history...";
-    historyDiv.style.display = "block";
-
-    fetch(`${GOOGLE_SCRIPT_URL}?mode=part_po_list&id=${currentPartId}`)
-        .then(res => {
-            if (!res.ok) throw new Error('Network response was not ok');
-            return res.json();
-        })
-        .then(data => {
-            // Check if 'history' exists and get its keys
-            const poKeys = data.history ? Object.keys(data.history) : [];
-            
-            if (poKeys.length > 0) {
-                let htmlContent = "<p style='margin:5px 0;'><strong>Recent History:</strong></p><ul style='text-align:left; padding-left:20px; margin:0;'>";
-                
-                poKeys.forEach(po => {
-                    const desc = data.history[po];
-                    // Making the PO clickable to save time!
-                    htmlContent += `<li style="margin-bottom:8px; font-size:0.85rem; border-bottom:1px solid #eee; padding-bottom:4px;">
-                        <span style="color:var(--purple); font-weight:bold; text-decoration:underline; cursor:pointer;" 
-                              onclick="selectExistingPO('${po}')">${po}</span>: 
-                        <i style="color:#666;">${desc}</i>
-                    </li>`;
-                });
-                
-                htmlContent += "</ul>";
-                historyDiv.innerHTML = htmlContent;
-            } else {
-                historyDiv.innerHTML = "<p style='font-size:0.8rem; color:#888;'>No previous PO history found for this part.</p>";
-            }
-        })
-        .catch(err => {
-            console.error("History Fetch Error:", err);
-            historyDiv.innerHTML = "<p style='color:var(--danger); font-size:0.8rem;'>❌ Error loading history. Check Connection.</p>";
-        });
-}
-
-// NEW: Helper function to auto-fill the PO when clicked
-function selectExistingPO(poNumber) {
-    document.getElementById('po-number-input').value = poNumber;
-    isPOValid = true;
-    document.getElementById('po-msg').innerText = "✅ PO Selected from History";
-    document.getElementById('po-msg').style.color = "green";
-}
-
+    // --- OUTBOUND (REMOVE) LOGIC ---
     function handleReasonChange() {
         const r = document.getElementById('removal-reason').value;
         document.getElementById('order-code-input-block').style.display = r==="For Making an Order" ? 'block':'none';
@@ -401,59 +291,44 @@ function selectExistingPO(poNumber) {
         const id = document.getElementById('purpose-order').value;
         fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`).then(res=>res.json()).then(data=>{
             const m = document.getElementById('order-verify-msg');
-            if(data.found && data.status==="Unfinished"){ m.innerText="✅ Valid Order: "+data.customer; m.style.color="green"; isOrderValid=true; }
-            else { m.innerText="❌ Invalid or Finished"; m.style.color="red"; isOrderValid=false; }
+            if(data.found && data.status==="Unfinished"){ m.innerText="✅ Valid: "+data.customer; m.style.color="green"; isOrderValid=true; }
+            else { m.innerText="❌ Invalid/Finished"; m.style.color="red"; isOrderValid=false; }
         });
     }
 
     function submitFinalData() {
-        const btn = document.getElementById('final-submit-btn');
-        const stockingOrderId = updateCodePreview(); // Get the generated [Part]_[PO]_[Batch] code
-    
-        // Validation
-        if (currentAction === 'IN') {
-            const hasPO = document.getElementById('check-has-po').checked;
-            if (hasPO && !document.getElementById('po-number-input').value) {
-                alert("Please enter the PO number.");
-                return;
-            }
+        const qty = Number(document.getElementById('qty').value);
+        if(currentAction==='OUT') {
+            if(qty > currentStockValue) { alert("Not enough stock!"); return; }
+            if(!isOrderValid) { alert("Verify Order first!"); return; }
         }
-    
-        btn.disabled = true;
-        btn.innerText = "⏳ Saving...";
-    
+
+        const btn = document.getElementById('final-submit-btn');
+        btn.disabled = true; btn.innerText = "⏳ Saving...";
+
         const payload = {
-            type: "STOCK_MOVE",
-            partId: currentPartId,
-            partName: currentPartName,
-            action: currentAction,
-            quantity: document.getElementById('qty').value,
-            staffName: localStorage.getItem("warehouse_staff_name"),
+            type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName, action: currentAction,
+            quantity: qty, staffName: localStorage.getItem("warehouse_staff_name"),
             purpose: document.getElementById('manual-purpose').value,
-            orderCode: (currentAction === 'OUT') ? document.getElementById('purpose-order').value : "",
-            poValue: (currentAction === 'IN') ? (document.getElementById('check-has-po').checked ? document.getElementById('po-number-input').value : "Temp") : "N/A",
-            stockingOrderId: stockingOrderId, // Column L
-            wasted: (currentAction === 'OUT' && document.getElementById('wasted-check').checked) ? "Yes" : ""
+            orderCode: (currentAction==='OUT') ? (document.getElementById('removal-reason').value === "For Making an Order" ? document.getElementById('purpose-order').value : document.getElementById('removal-reason').value) : "",
+            poValue: (currentAction==='IN') ? (document.getElementById('check-has-po').checked ? document.getElementById('po-number-input').value : "Temp") : "N/A",
+            poDescription: (currentAction==='IN') ? document.getElementById('po-description').value : "",
+            stockingOrderId: (currentAction==='IN') ? updateCodePreview() : "",
+            wasted: (currentAction==='OUT' && document.getElementById('wasted-check').checked) ? "Yes" : ""
         };
-    
-        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
-            .then(() => { alert("Saved successfully!"); location.reload(); });
+
+        fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) }).then(()=> { alert("Saved!"); location.reload(); });
     }
 
     function submitNewOrder() {
         const c=document.getElementById('cust-name').value, p=document.getElementById('order-prod').value, d=document.getElementById('order-deadline').value;
         if(!c || !p || !d){ alert("Required fields missing"); return; }
-        const b = document.getElementById('order-submit-btn'); b.disabled=true; b.innerText="⏳ Processing...";
         fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify({
-            type:"NEW_ORDER", customer:c, product:p, deadline:d, details:document.getElementById('order-details').value, poNumber:document.getElementById('order-po').value
+            type:"NEW_ORDER", customer:c, product:p, deadline:d, poNumber:document.getElementById('order-po').value
         })}).then(res=>res.json()).then(data=>{ alert(`Order Created: ${data.code}`); location.reload(); });
     }
 
-    function showManual() {
-        const s = document.getElementById('scanner-view'), m = document.getElementById('manual-entry-section');
-        if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(()=>{ s.style.display='none'; m.style.display='block'; });
-        else { s.style.display='none'; m.style.display='block'; }
-    }
+    function showManual() { document.getElementById('scanner-view').style.display='none'; document.getElementById('manual-entry-section').style.display='block'; }
     function showScanner() { document.getElementById('manual-entry-section').style.display='none'; document.getElementById('scanner-view').style.display='block'; startScanner(); }
     function handleManualSubmit() { const c = document.getElementById('manual-code-input').value; if(c.length===6) onScanSuccess(c); else alert("Enter 6 digits"); }
 </script>
