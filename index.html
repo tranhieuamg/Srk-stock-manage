@@ -32,11 +32,45 @@
         .checkbox-container input { width: 22px; height: 22px; margin: 0; }
         .checkbox-container label { margin: 0; font-size: 0.9rem; flex: 1; text-align: left; }
 
+       /* Styling for the Download Button */
+        .btn-download { background: #17a2b8; margin-top: 10px; }
+        
+        /* PRINT PREVIEW FIX */
         @media print {
+            /* Hide everything except the modal content */
             body * { visibility: hidden; }
             #qr-modal, #qr-modal * { visibility: visible; }
-            #qr-modal { position: absolute; left: 0; top: 0; width: 100%; background: white; }
-            .btn-cancel, .btn-unlock { display: none; } /* Hide buttons on the actual print */
+            
+            #qr-modal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: auto;
+                background: white;
+                display: flex !important;
+                justify-content: center;
+                align-items: center;
+            }
+        
+            /* Force the specific white box to center on the page */
+            #qr-modal > div {
+                box-shadow: none;
+                border: none;
+                width: 100%;
+                margin: 0 auto;
+                text-align: center;
+            }
+        
+            #qrcode-canvas {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: 0 auto !important;
+            }
+        
+            /* Hide buttons during print */
+            .btn-unlock, .btn-cancel, .btn-download, h3 { display: none !important; }
         }
         #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 8px; overflow: hidden; background: #000; }
         .status-msg { font-size: 0.85rem; font-weight: bold; margin: 10px 0; display: block; }
@@ -171,12 +205,16 @@
     </div>
 </div>
     <div id="qr-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center;">
-        <div style="background:white; padding:20px; border-radius:12px; width:85%; max-width:350px;">
-            <h3 style="margin-top:0;">Print Label</h3>
-            <div id="qrcode-canvas" style="display:flex; justify-content:center; margin:20px 0;"></div>
+        <div style="background:white; padding:20px; border-radius:12px; width:85%; max-width:350px; text-align:center;">
+            <h3 style="margin-top:0;">Batch Label Ready</h3>
+            
+            <div id="qrcode-canvas" style="display:flex; justify-content:center; margin:20px 0; border:1px solid #eee; padding:10px;"></div>
+            
             <p id="label-text" style="font-size:0.9rem; font-weight:bold; word-break:break-all;"></p>
-            <button class="btn-unlock" onclick="window.print()">🖨️ Print / Save</button>
-            <button class="btn-cancel" onclick="location.reload()">Done / Close</button>
+            
+            <button class="btn-unlock" onclick="window.print()">🖨️ Print Centered Label</button>
+            <button class="btn-download" onclick="downloadQR()">💾 Download to Gallery</button>
+            <button class="btn-cancel" onclick="location.reload()">Done / Next Scan</button>
         </div>
     </div>
 
@@ -381,24 +419,16 @@
         const modal = document.getElementById('qr-modal');
         const canvas = document.getElementById('qrcode-canvas');
         
-        // 1. Show the modal first
         modal.style.display = 'flex';
-        canvas.innerHTML = ""; // Clear old QR
+        canvas.innerHTML = ""; 
     
-        // 2. Add a tiny delay (100ms) to ensure the 'canvas' div is active in the DOM
         setTimeout(() => {
             try {
-                // 3. Double check library exists
-                if (typeof QRCode === "undefined") {
-                    throw new Error("QRCode library not loaded");
-                }
-    
+                // Generate QR
                 new QRCode(canvas, {
                     text: orderId,
-                    width: 180,
-                    height: 180,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
+                    width: 200,
+                    height: 200,
                     correctLevel : QRCode.CorrectLevel.H
                 });
                 
@@ -407,10 +437,25 @@
                     <span style="color:#666;">Batch ID: ${orderId}</span>
                 `;
             } catch (e) {
-                console.error("QR Generation Error:", e);
-                alert("⚠️ Stock saved to Sheet, but QR could not be drawn.\nBatch ID: " + orderId);
+                alert("QR Generation Error. ID: " + orderId);
             }
-        }, 100);
+        }, 150);
+    }
+    
+    function downloadQR() {
+        // Find the image created by the QR library
+        const qrImage = document.querySelector('#qrcode-canvas img');
+        if (!qrImage) {
+            alert("QR Image not found. Try again.");
+            return;
+        }
+    
+        const link = document.createElement('a');
+        link.href = qrImage.src;
+        link.download = `Label_${currentPartId}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
     
     function submitNewOrder() {
