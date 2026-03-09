@@ -103,24 +103,40 @@
                 <label>Purpose:</label>
                 <input type="text" id="manual-purpose" placeholder="Notes (Internal)">
 
-                <div id="po-link-section" style="display:none;">
-                    <label>PO / Contract / Tracking:</label>
-                    <div class="btn-group-inline">
-                        <button type="button" class="btn-toggle" onclick="setPOChoice('none')">None</button>
-                        <button type="button" class="btn-toggle" onclick="setPOChoice('search')">Search</button>
-                        <button type="button" class="btn-toggle" onclick="setPOChoice('new')">New</button>
+                <div id="po-link-section" style="display:none;" class="sub-section">
+                <label>📦 Stocking Order Configuration</label>
+                
+                <div style="text-align: left; margin: 10px auto; width: 90%;">
+                    <div class="checkbox-container" style="background: #eefbff; border: 1px solid #bee5eb;">
+                        <input type="checkbox" id="check-has-po" onchange="togglePOInput()">
+                        <label for="check-has-po" style="margin:0;">PO/Contract Available?</label>
                     </div>
-                    <div id="po-input-block" style="display:none;">
-                        <input type="text" id="po-number-input" placeholder="PO #">
-                        <input type="text" id="po-description" placeholder="Description" style="display:none;">
-                        <div class="btn-group-inline" id="po-search-btns" style="display:none;">
-                            <button type="button" class="btn-unlock" style="background:var(--purple);" onclick="verifyPO()">Verify #</button>
-                            <button type="button" class="btn-toggle" style="background:#444;" onclick="listPreviousPOs()">History</button>
-                        </div>
-                        <p id="po-msg" class="status-msg"></p>
-                        <div id="po-history-list" style="font-size:0.7rem; background:#eee; padding:5px; display:none; border-radius:8px;"></div>
+                    
+                    <div class="checkbox-container" style="background: #fff9e6; border: 1px solid #ffeeba;">
+                        <input type="checkbox" id="check-batches" onchange="toggleBatchInput()">
+                        <label for="check-batches" style="margin:0;">Delivered in Batches?</label>
+                    </div>
+            
+                    <div class="checkbox-container" style="background: #f3f3f3; border: 1px solid #ddd;">
+                        <input type="checkbox" id="check-shared-po">
+                        <label for="check-shared-po" style="margin:0;">Share PO with other parts?</label>
                     </div>
                 </div>
+            
+                <div id="po-number-block" style="display:none;">
+                    <label>PO / Contract Number:</label>
+                    <input type="text" id="po-number-input" placeholder="Enter PO #">
+                </div>
+            
+                <div id="batch-number-block" style="display:none;">
+                    <label>Batch / Lot Number:</label>
+                    <input type="number" id="batch-number-input" placeholder="e.g. 1" value="1">
+                </div>
+                
+                <p id="code-preview" style="font-size: 0.8rem; color: #666; font-style: italic; margin-top:10px;">
+                    Order Code Preview: [Scan a part first]
+                </p>
+            </div>
 
                 <div id="order-link-section" style="display:none;">
                     <label>Reason for Removal:</label>
@@ -228,6 +244,40 @@
         isOrderValid = (mode==='IN');
     }
 
+    function togglePOInput() {
+        const hasPO = document.getElementById('check-has-po').checked;
+        document.getElementById('po-number-block').style.display = hasPO ? 'block' : 'none';
+        updateCodePreview();
+    }
+    
+    function toggleBatchInput() {
+        const isBatched = document.getElementById('check-batches').checked;
+        document.getElementById('batch-number-block').style.display = isBatched ? 'block' : 'none';
+        updateCodePreview();
+    }
+    
+    // Update the preview text as the user types/clicks
+    function updateCodePreview() {
+        if (!currentPartId) return;
+        
+        const hasPO = document.getElementById('check-has-po').checked;
+        const poNum = document.getElementById('po-number-input').value || "Temp";
+        
+        const isBatched = document.getElementById('check-batches').checked;
+        const batchNum = document.getElementById('batch-number-input').value || "1";
+        
+        const finalPO = hasPO ? poNum : "Temp";
+        const finalBatch = isBatched ? `B${batchNum}` : "Single";
+        
+        const generatedCode = `${currentPartId}_${finalPO}_${finalBatch}`;
+        document.getElementById('code-preview').innerText = "Order Code Preview: " + generatedCode;
+        return generatedCode;
+    }
+    
+    // Attach listeners to update preview on typing
+    document.getElementById('po-number-input').addEventListener('input', updateCodePreview);
+    document.getElementById('batch-number-input').addEventListener('input', updateCodePreview);
+    
     function setPOChoice(choice) {
         poChoice = choice;
         document.getElementById('po-input-block').style.display = choice==='none' ? 'none':'block';
@@ -316,25 +366,37 @@ function selectExistingPO(poNumber) {
     }
 
     function submitFinalData() {
-        const qty = Number(document.getElementById('qty').value);
-        if(currentAction==='IN'){ 
-            if(poChoice==='new' && !document.getElementById('po-number-input').value){ alert("Please enter PO Number"); return; } 
-            if(!isPOValid){ alert("Please verify PO first"); return; } 
-        } else { 
-            if(qty > currentStockValue){ alert("Insufficient stock available!"); return; } 
-            if(!isOrderValid){ alert("Please verify the order/reason."); return; } 
+        const btn = document.getElementById('final-submit-btn');
+        const stockingOrderId = updateCodePreview(); // Get the generated [Part]_[PO]_[Batch] code
+    
+        // Validation
+        if (currentAction === 'IN') {
+            const hasPO = document.getElementById('check-has-po').checked;
+            if (hasPO && !document.getElementById('po-number-input').value) {
+                alert("Please enter the PO number.");
+                return;
+            }
         }
-        
-        const btn = document.getElementById('final-submit-btn'); btn.disabled=true; btn.innerText="⏳ Recording...";
-        let link="", po="N/A", desc="";
-        if(currentAction==='IN' && poChoice!=='none'){ po=document.getElementById('po-number-input').value; desc=document.getElementById('po-description').value; }
-        if(currentAction==='OUT'){ const r=document.getElementById('removal-reason').value; link=(r==="For Making an Order")?document.getElementById('purpose-order').value:r; }
-
-        fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify({
-            type:"STOCK_MOVE", partId:currentPartId, partName:currentPartName, action:currentAction, quantity:qty,
-            staffName:localStorage.getItem("warehouse_staff_name"), purpose:document.getElementById('manual-purpose').value,
-            orderCode:link, poValue:po, poDescription:desc, wasted: (currentAction==='OUT' && document.getElementById('wasted-check').checked)?"Yes":""
-        })}).then(()=> { alert("Success! Stock Updated."); location.reload(); });
+    
+        btn.disabled = true;
+        btn.innerText = "⏳ Saving...";
+    
+        const payload = {
+            type: "STOCK_MOVE",
+            partId: currentPartId,
+            partName: currentPartName,
+            action: currentAction,
+            quantity: document.getElementById('qty').value,
+            staffName: localStorage.getItem("warehouse_staff_name"),
+            purpose: document.getElementById('manual-purpose').value,
+            orderCode: (currentAction === 'OUT') ? document.getElementById('purpose-order').value : "",
+            poValue: (currentAction === 'IN') ? (document.getElementById('check-has-po').checked ? document.getElementById('po-number-input').value : "Temp") : "N/A",
+            stockingOrderId: stockingOrderId, // Column L
+            wasted: (currentAction === 'OUT' && document.getElementById('wasted-check').checked) ? "Yes" : ""
+        };
+    
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
+            .then(() => { alert("Saved successfully!"); location.reload(); });
     }
 
     function submitNewOrder() {
