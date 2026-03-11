@@ -20,7 +20,10 @@
         .btn-toggle { background: #6c757d; }
         .btn-purple { background: var(--purple); }
         .btn-cancel { background: #666; }
+        
+        /* Fixed Downloader Button Color */
         .btn-download { background: #17a2b8; margin-top: 10px; }
+        
         .btn-group-inline { display: flex; gap: 10px; width: 95%; max-width: 400px; margin: 10px auto; }
         .btn-group-inline button { flex: 1; margin: 0; width: auto; font-size: 0.75rem; padding: 10px 5px; }
         .checkbox-container { display: flex; align-items: center; justify-content: flex-start; gap: 10px; margin: 10px auto; padding: 12px; border-radius: 8px; width: 95%; max-width: 400px; box-sizing: border-box; border: 1px solid #ddd; }
@@ -32,12 +35,34 @@
         .preview-box { font-size: 0.75rem; color: #555; background: #e9ecef; padding: 8px; border-radius: 4px; margin-top: 10px; word-break: break-all; }
         .search-results { font-size: 0.8rem; background: #fff; border: 1px solid #ddd; border-radius: 8px; text-align: left; padding: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; }
         
+        /* 1. THE PRINT LAYOUT & CENTERING FIX */
         @media print {
             body * { visibility: hidden; }
             #qr-modal, #qr-modal * { visibility: visible; }
-            #qr-modal { position: absolute; left: 0; top: 0; width: 100%; height: auto; background: white; display: flex !important; justify-content: center; align-items: center; }
-            #qr-modal > div { box-shadow: none; border: none; width: 100%; margin: 0 auto; text-align: center; }
-            #qrcode-canvas { display: flex; justify-content: center; align-items: center; margin: 0 auto !important; }
+            #qr-modal {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: auto;
+                background: white;
+                display: flex !important;
+                justify-content: center;
+                align-items: center;
+            }
+            #qr-modal > div {
+                box-shadow: none;
+                border: none;
+                width: 100%;
+                margin: 0 auto;
+                text-align: center;
+            }
+            #qrcode-canvas {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: 0 auto !important;
+            }
             .btn-unlock, .btn-cancel, .btn-download, h3 { display: none !important; }
         }
     </style>
@@ -62,7 +87,7 @@
         <h2>Dashboard</h2>
         <button class="btn-unlock" onclick="showPage('stock')">📦 Stock Management</button>
         <button class="btn-purple" onclick="showPage('order')">📝 Order Management</button>
-        <p onclick="logout()" style="color:grey; text-decoration:underline; cursor:pointer; margin-top:40px;">Log out</p>
+        <p onclick="logout()" style="color:grey; text-decoration:underline; cursor:pointer;">Log out</p>
     </div>
 
     <div id="stock-page" style="display:none;">
@@ -72,8 +97,8 @@
             <button class="btn-toggle" onclick="showManual()">⌨️ Manual Code</button>
         </div>
         <div id="manual-entry-section" style="display:none;">
-            <input type="text" id="manual-code-input" placeholder="Part or Batch ID">
-            <button class="btn-unlock" onclick="handleManualSubmit()">Find Code</button>
+            <input type="number" id="manual-code-input" placeholder="6-Digit Part Code">
+            <button class="btn-unlock" onclick="handleManualSubmit()">Find Part</button>
             <button class="btn-toggle" onclick="showScanner()">📷 Scanner</button>
         </div>
 
@@ -90,6 +115,7 @@
             </div>
 
             <div id="movement-form" style="display:none;">
+                <h4 id="form-title">Moving Stock</h4>
                 <label>Quantity:</label>
                 <input type="number" id="qty" value="1" min="1">
                 <input type="text" id="manual-purpose" placeholder="Notes (Internal)">
@@ -147,7 +173,6 @@
                         </div>
                     </div>
                 </div>
-
                 <button id="final-submit-btn" class="btn-unlock" onclick="submitFinalData()" style="margin-top:20px;">Confirm Transaction</button>
             </div>
             <button class="btn-cancel" onclick="location.reload()">Cancel</button>
@@ -155,8 +180,7 @@
     </div>
 
     <div id="order-page" style="display:none;">
-        <button class="btn-toggle" onclick="showPage('menu')">⬅ Back to Dashboard</button>
-        
+        <button class="btn-toggle" onclick="showPage('menu')">⬅ Back</button>
         <div class="sub-section">
             <h3>New Order Registration</h3>
             <input type="text" id="cust-name" placeholder="Customer Name *">
@@ -167,12 +191,10 @@
             <input type="date" id="order-deadline">
             <button class="btn-add" id="order-submit-btn" onclick="submitNewOrder()">🚀 Create Order</button>
         </div>
-
         <div class="sub-section" style="border-top: 4px solid var(--purple);">
             <h3>Update Order Status</h3>
             <input type="number" id="search-order-id" placeholder="Enter 6-digit Order Code">
             <button class="btn-unlock" onclick="findOrderForEdit()">Search Order</button>
-            
             <div id="order-edit-controls" style="display:none; margin-top:15px; background:#f9f9f9; padding:15px; border-radius:8px; text-align: left;">
                 <p><strong>Customer:</strong> <span id="edit-cust"></span></p>
                 <p><strong>Product:</strong> <span id="edit-prod"></span></p>
@@ -186,10 +208,15 @@
 <div id="qr-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center;">
     <div style="background:white; padding:20px; border-radius:12px; width:85%; max-width:350px; text-align:center;">
         <h3 style="margin-top:0;">Batch Label Ready</h3>
+        
         <div id="qrcode-canvas" style="display:flex; justify-content:center; margin:20px 0; border:1px solid #eee; padding:10px;"></div>
+        
         <p id="label-text" style="font-size:0.9rem; font-weight:bold; word-break:break-all;"></p>
+        
         <button class="btn-unlock" onclick="window.print()">🖨️ Print Centered Label</button>
+        
         <button class="btn-download" onclick="downloadQR()">💾 Download to Gallery</button>
+        
         <button class="btn-cancel" onclick="location.reload()">Done / Next Scan</button>
     </div>
 </div>
@@ -199,89 +226,59 @@
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
 
     let currentPartId="", currentPartName="", currentAction="", html5QrCode, scannedBatchId="";
-    let isOrderValid=false, currentStockValue=0;
+    let isOrderValid=false, isPOValid=false, currentStockValue=0, poChoice="";
     let currentEditOrderCode = "", currentEditStatus = "";
+    
+    // Global to store the *generated* In-bound ID for filename on download
+    let generatedInId = "";
 
-    window.onload = () => { 
-        if(localStorage.getItem("warehouse_authenticated")==="true"){ 
-            document.getElementById('login-overlay').style.display='none'; 
-            document.getElementById('main-app').style.display='block';
-            fetchActiveOrders(); // Fetch active orders in the background
-        } 
-    };
+    window.onload = () => { if(localStorage.getItem("warehouse_authenticated")==="true"){ document.getElementById('login-overlay').style.display='none'; document.getElementById('main-app').style.display='block'; fetchActiveOrders(); } };
 
-    function checkPin() {
-        if (document.getElementById('pin-input').value === MY_M_K) {
-            localStorage.setItem("warehouse_authenticated", "true");
-            localStorage.setItem("warehouse_staff_name", document.getElementById('staff-name').value);
-            location.reload();
-        } else alert("Wrong PIN");
-    }
-
+    function checkPin() { if (document.getElementById('pin-input').value === MY_M_K) { localStorage.setItem("warehouse_authenticated", "true"); localStorage.setItem("warehouse_staff_name", document.getElementById('staff-name').value); location.reload(); } else alert("Denied"); }
     function logout() { localStorage.clear(); location.reload(); }
-
     function showPage(page) {
-        document.getElementById('dashboard-menu').style.display='none'; 
-        document.getElementById('stock-page').style.display='none'; 
-        document.getElementById('order-page').style.display='none';
+        document.getElementById('dashboard-menu').style.display='none'; document.getElementById('stock-page').style.display='none'; document.getElementById('order-page').style.display='none';
         if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
         if(page==='menu') document.getElementById('dashboard-menu').style.display='block';
         if(page==='stock') { document.getElementById('stock-page').style.display='block'; startScanner(); }
         if(page==='order') document.getElementById('order-page').style.display='block';
     }
 
-    // --- FETCH ACTIVE ORDERS FOR DROPDOWN ---
     function fetchActiveOrders() {
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`)
-            .then(res => res.json())
-            .then(data => {
-                const select = document.getElementById('purpose-order');
-                select.innerHTML = '<option value="" disabled selected>Select an Active Order...</option>';
-                if (data.orders.length > 0) {
-                    data.orders.forEach(order => {
-                        select.innerHTML += `<option value="${order.code}">${order.code} - ${order.customer} (${order.product})</option>`;
-                    });
-                } else {
-                    select.innerHTML = '<option value="" disabled selected>No Active Orders Available</option>';
-                }
-            }).catch(() => {
-                document.getElementById('purpose-order').innerHTML = '<option value="" disabled selected>Error loading orders</option>';
-            });
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`).then(res => res.json()).then(data => {
+            const select = document.getElementById('purpose-order');
+            select.innerHTML = '<option value="" disabled selected>Select Active Order...</option>';
+            if (data.orders.length > 0) {
+                data.orders.forEach(order => { select.innerHTML += `<option value="${order.code}">${order.code} - ${order.customer} (${order.product})</option>`; });
+            } else select.innerHTML = '<option value="" disabled selected>No Active Orders</option>';
+        });
     }
 
-    // --- SCANNER & ITEM FETCH ---
     function startScanner() { if(!html5QrCode) html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({facingMode:"environment"}, {fps:10, qrbox:250}, onScanSuccess); }
 
-    function onScanSuccess(decodedText) {
+    function onScanSuccess(code) {
         const proceed = () => {
             document.getElementById('scanner-view').style.display='none'; document.getElementById('manual-entry-section').style.display='none'; document.getElementById('controls').style.display='block';
-            const isBatchCode = decodedText.includes('_');
-            currentPartId = isBatchCode ? decodedText.split('_')[0] : decodedText;
-            scannedBatchId = isBatchCode ? decodedText : "";
+            const isBatchCode = code.includes('_');
+            currentPartId = isBatchCode ? code.split('_')[0] : code;
+            scannedBatchId = isBatchCode ? code : "";
             
             const mode = isBatchCode ? "batch_info" : "stock";
-
-            fetch(`${GOOGLE_SCRIPT_URL}?mode=${mode}&id=${decodedText}`).then(res=>res.json()).then(data=>{
+            fetch(`${GOOGLE_SCRIPT_URL}?mode=${mode}&id=${code}`).then(res=>res.json()).then(data=>{
                 const display = document.getElementById('stock-display');
                 if(data.found){
                     currentPartName=data.name; currentStockValue=Number(data.stock);
                     document.getElementById('item-name').innerText="✅ "+data.name;
-                    if(isBatchCode) {
-                        display.innerText="Batch Remaining: "+data.stock;
-                        document.getElementById('item-id').innerText="Batch: "+decodedText;
-                    } else {
-                        display.innerText="Total Stock: "+data.stock;
-                        document.getElementById('item-id').innerText="Part ID: "+currentPartId;
-                    }
+                    if(isBatchCode) { display.innerText="Batch Remaining: "+data.stock; document.getElementById('item-id').innerText="Batch: "+code;
+                    } else { display.innerText="Total Stock: "+data.stock; document.getElementById('item-id').innerText="Part ID: "+currentPartId; }
                     display.style.color = currentStockValue < 10 ? "var(--warning)" : "var(--text)";
-                    if(currentStockValue <= 0) { display.style.color="var(--danger)"; display.innerText += " (EMPTY)"; }
+                    if(currentStockValue <= 0) { display.style.color="var(--danger)"; display.innerText="OUT OF STOCK"; }
                 } else { alert("Not Found or Empty"); location.reload(); }
             });
         };
         if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed); else proceed();
     }
 
-    // --- STOCK MOVEMENT LOGIC ---
     function setActionMode(mode) {
         currentAction = mode;
         document.getElementById('action-selector').style.display='none'; document.getElementById('movement-form').style.display='block';
@@ -323,91 +320,74 @@
         });
     }
 
-    // --- OUTBOUND VALIDATION ---
     function handleReasonChange() {
         const r = document.getElementById('removal-reason').value;
         const block = document.getElementById('order-code-input-block');
-        if (r === "For Making an Order") {
-            block.style.display = 'block';
-            checkOrderSelection(); // Validate dropdown
-        } else {
-            block.style.display = 'none';
-            isOrderValid = true;
-        }
+        if (r === "For Making an Order") { block.style.display = 'block'; checkOrderSelection(); } else { block.style.display = 'none'; isOrderValid = true; }
     }
 
-    function checkOrderSelection() {
-        isOrderValid = document.getElementById('purpose-order').value !== "";
-    }
+    function checkOrderSelection() { isOrderValid = document.getElementById('purpose-order').value !== ""; }
 
-    // --- FINAL SUBMISSION ---
     function submitFinalData() {
         const qty = Number(document.getElementById('qty').value);
         if(currentAction==='OUT') {
             if(qty > currentStockValue) { alert("Not enough stock!"); return; }
-            if(!isOrderValid) { alert("Please select a valid Order from the list."); return; }
+            if(!isOrderValid) { alert("Pick active order!"); return; }
         }
 
         const btn = document.getElementById('final-submit-btn'); btn.disabled = true; btn.innerText = "⏳ Saving...";
-        const targetStockingId = (currentAction === 'IN') ? updateCodePreview() : scannedBatchId;
+        
+        // --- FILENAME FIX ---
+        // 1. Generate ID for IN transactions
+        const targetInId = (currentAction === 'IN') ? updateCodePreview() : "";
+        // 2. Store it globally so Download can use it
+        generatedInId = (currentAction === 'IN') ? targetInId : "";
 
         const payload = {
-            type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName, action: currentAction,
-            quantity: qty, staffName: localStorage.getItem("warehouse_staff_name"),
-            purpose: document.getElementById('manual-purpose').value,
+            type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName, action: currentAction, quantity: qty,
+            staffName: localStorage.getItem("warehouse_staff_name"), purpose: document.getElementById('manual-purpose').value,
             orderCode: (currentAction==='OUT') ? (document.getElementById('removal-reason').value === "For Making an Order" ? document.getElementById('purpose-order').value : document.getElementById('removal-reason').value) : "",
             poValue: (currentAction==='IN') ? (document.getElementById('check-has-po').checked ? document.getElementById('po-number-input').value : "Temp") : "N/A",
             poDescription: (currentAction==='IN') ? document.getElementById('po-description').value : "",
-            stockingOrderId: targetStockingId,
+            stockingOrderId: (currentAction==='IN') ? targetInId : scannedBatchId,
             wasted: (currentAction==='OUT' && document.getElementById('wasted-check').checked) ? "Yes" : ""
         };
 
         fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) }).then(()=> { 
-            if (currentAction === 'IN' && targetStockingId !== "N/A") { generateLabel(targetStockingId, currentPartName); } 
+            // 3. Conditional QR or reload
+            if (currentAction === 'IN' && targetInId !== "N/A") { generateLabel(targetInId, currentPartName); } 
             else { alert("Saved!"); location.reload(); }
-        }).catch(() => { alert("Error saving data."); btn.disabled = false; btn.innerText = "Confirm Transaction"; });
+        }).catch(() => { alert("Error."); btn.disabled = false; });
     }
 
-    // --- ORDER STATUS MANAGEMENT ---
     function submitNewOrder() {
         const c=document.getElementById('cust-name').value, p=document.getElementById('order-prod').value, d=document.getElementById('order-deadline').value;
-        if(!c || !p || !d){ alert("Required fields missing"); return; }
+        if(!c || !p || !d){ alert("Required missing"); return; }
         document.getElementById('order-submit-btn').disabled = true;
-        fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify({
-            type:"NEW_ORDER", customer:c, product:p, deadline:d, details:document.getElementById('order-details').value, poNumber:document.getElementById('order-po').value
-        })}).then(res=>res.json()).then(data=>{ alert(`Order Created: ${data.code}`); location.reload(); });
+        fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify({ type:"NEW_ORDER", customer:c, product:p, deadline:d, poNumber:document.getElementById('order-po').value })
+        }).then(res=>res.json()).then(data=>{ alert(`Order Created: ${data.code}`); location.reload(); });
     }
 
     function findOrderForEdit() {
         const id = document.getElementById('search-order-id').value;
-        if (!id) return;
         fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`).then(res => res.json()).then(data => {
             if (data.found) {
                 currentEditOrderCode = id; currentEditStatus = data.status;
-                document.getElementById('edit-cust').innerText = data.customer;
-                document.getElementById('edit-prod').innerText = data.product;
-                document.getElementById('edit-status').innerText = data.status;
-                document.getElementById('order-edit-controls').style.display = 'block';
-                
+                document.getElementById('edit-cust').innerText = data.customer; document.getElementById('edit-prod').innerText = data.product; document.getElementById('edit-status').innerText = data.status; document.getElementById('order-edit-controls').style.display = 'block';
                 const btn = document.getElementById('status-toggle-btn');
                 btn.innerText = data.status === "Unfinished" ? "Mark as Finished" : "Re-open Order";
-                btn.style.background = data.status === "Unfinished" ? "var(--success)" : "var(--warning)";
-                btn.style.color = "white";
-            } else { alert("Order code not found."); }
+                btn.style.background = data.status === "Unfinished" ? "var(--success)" : "var(--warning)"; btn.style.color = "white";
+            } else alert("Order not found.");
         });
     }
 
     function toggleOrderStatus() {
         const newStatus = currentEditStatus === "Unfinished" ? "Finished" : "Unfinished";
-        const btn = document.getElementById('status-toggle-btn');
-        btn.disabled = true; btn.innerText = "⏳ Updating...";
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: "POST",
-            body: JSON.stringify({ type: "UPDATE_ORDER_STATUS", orderCode: currentEditOrderCode, newStatus: newStatus })
+        const btn = document.getElementById('status-toggle-btn'); btn.disabled = true; btn.innerText = "⏳ Updating...";
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({ type: "UPDATE_ORDER_STATUS", orderCode: currentEditOrderCode, newStatus: newStatus })
         }).then(() => { alert("Status updated to " + newStatus); location.reload(); });
     }
 
-    // --- UTILS ---
     function showManual() { document.getElementById('scanner-view').style.display='none'; document.getElementById('manual-entry-section').style.display='block'; }
     function showScanner() { document.getElementById('manual-entry-section').style.display='none'; document.getElementById('scanner-view').style.display='block'; startScanner(); }
     function handleManualSubmit() { const c = document.getElementById('manual-code-input').value; if(c) onScanSuccess(c); else alert("Enter Code"); }
@@ -417,19 +397,64 @@
         modal.style.display = 'flex'; canvas.innerHTML = ""; 
         setTimeout(() => {
             try {
-                if (typeof QRCode === "undefined") throw new Error("QRCode library not loaded");
+                if (typeof QRCode === "undefined") throw new Error("QR library fail");
                 new QRCode(canvas, { text: orderId, width: 200, height: 200, correctLevel : QRCode.CorrectLevel.H });
                 document.getElementById('label-text').innerHTML = `<strong style="font-size:1.2rem;">${partName}</strong><br><span style="color:#666;">ID: ${orderId}</span>`;
-            } catch (e) { alert("⚠️ Data saved, but QR could not be drawn. ID: " + orderId); }
+            } catch (e) { alert("⚠️ Data saved, but QR fail. ID: " + orderId); }
         }, 150);
     }
 
+    // --- 3. THE NEW DOWNLOAD SCRIPT ---
     function downloadQR() {
-        const qrImage = document.querySelector('#qrcode-canvas img');
-        if (!qrImage) { alert("QR not found."); return; }
+        // target the source canvas, much more reliable than the img fallback
+        const canvas = document.querySelector('#qrcode-canvas canvas');
+        
+        if (!canvas) {
+            // Unlikely fallback
+            const img = document.querySelector('#qrcode-canvas img');
+            if(img && img.src){ performDownload(img.src); return; }
+            alert("QR image not ready."); return;
+        }
+
+        try {
+            // explicit conversion to base64 PNG data URL
+            const dataUrl = canvas.toDataURL("image/png");
+            performDownload(dataUrl);
+        } catch(e) {
+            console.error("Download Error:", e);
+            handleDownloadError();
+        }
+    }
+
+    function performDownload(url) {
+        // Filename Logic: IN generated ID, or OUT scanned batch ID
+        let rawFilenamePart = (currentAction === 'IN') ? generatedInId : scannedBatchId;
+        if (!rawFilenamePart) rawFilenamePart = currentPartId; // fallback
+
+        // Sanitize part of the filename (remove special chars/spaces)
+        const sanitizedFilenamePart = rawFilenamePart.replace(/[^\w.-]/g, '_');
+        const filename = `Batch_${sanitizedFilenamePart}.png`;
+
         const link = document.createElement('a');
-        link.href = qrImage.src; link.download = `Batch_${currentPartId}.png`;
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        link.href = url; link.download = filename;
+        
+        // MOBILE COMPATIBILITY: program downloads are often strictly blocked.
+        // detect iOS to provide window.open fallback and instructions.
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        if(isIOS){
+            // programme download direct blocked by iOS. Open in new tab for user to save manually.
+            window.open(url, "_blank");
+            alert("⚠️ iOS Blocks Automatic Downloads.\n\nThe QR code image has opened in a new tab.\n\nPLEASE Long-press (tap and hold) on the QR and select 'Add to Photos'.");
+        } else {
+            // Standard hidden link download (Android/Chrome/Firefox/Desktop)
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            console.log("Download triggered:", filename);
+        }
+    }
+
+    function handleDownloadError() {
+        alert("Sorry, we couldn't automatically save the image.\n\nPlease Long-press (tap and hold) on the QR code displayed on the screen and select 'Save Image' or 'Add to Photos'.");
     }
 </script>
 </body>
