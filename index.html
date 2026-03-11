@@ -57,13 +57,15 @@
                 margin: 0 auto;
                 text-align: center;
             }
-            #qrcode-canvas {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin: 0 auto !important;
+            #qrcode-canvas canvas, #qrcode-canvas img {
+                margin: 0 auto;
+                display: block;
+                max-width: 100%;
+                height: auto;
             }
-            .btn-unlock, .btn-cancel, .btn-download, h3 { display: none !important; }
+            
+            /* Ensure the download button stands out */
+            .btn-download { background: #17a2b8 !important; color: white !important; }
         }
     </style>
 </head>
@@ -209,15 +211,17 @@
     <div style="background:white; padding:20px; border-radius:12px; width:85%; max-width:350px; text-align:center;">
         <h3 style="margin-top:0;">Batch Label Ready</h3>
         
-        <div id="qrcode-canvas" style="display:flex; justify-content:center; margin:20px 0; border:1px solid #eee; padding:10px;"></div>
+        <div id="qrcode-canvas" style="display:block; margin:20px auto; border:1px solid #eee; padding:10px; background: white;"></div>
         
         <p id="label-text" style="font-size:0.9rem; font-weight:bold; word-break:break-all;"></p>
         
-        <button class="btn-unlock" onclick="window.print()">🖨️ Print Centered Label</button>
+        <button type="button" class="btn-unlock" onclick="window.print()">🖨️ Print Label</button>
+        <button type="button" class="btn-download" onclick="downloadQR(event)">💾 Download to Gallery</button>
+        <button type="button" class="btn-cancel" onclick="location.reload()">Done / Next Scan</button>
         
-        <button class="btn-download" onclick="downloadQR()">💾 Download to Gallery</button>
-        
-        <button class="btn-cancel" onclick="location.reload()">Done / Next Scan</button>
+        <p id="manual-save-tip" style="display:none; font-size:0.75rem; color:#666; margin-top:10px;">
+            Tip: If download fails, Long-Press the QR code above to save.
+        </p>
     </div>
 </div>
 
@@ -392,37 +396,83 @@
     function showScanner() { document.getElementById('manual-entry-section').style.display='none'; document.getElementById('scanner-view').style.display='block'; startScanner(); }
     function handleManualSubmit() { const c = document.getElementById('manual-code-input').value; if(c) onScanSuccess(c); else alert("Enter Code"); }
 
+    // Ensure generateLabel populates the variables correctly
     function generateLabel(orderId, partName) {
-        const modal = document.getElementById('qr-modal'); const canvas = document.getElementById('qrcode-canvas');
-        modal.style.display = 'flex'; canvas.innerHTML = ""; 
+        generatedInId = orderId; // Store globally for the downloader
+        const modal = document.getElementById('qr-modal');
+        const canvas = document.getElementById('qrcode-canvas');
+        
+        modal.style.display = 'flex';
+        canvas.innerHTML = ""; 
+    
         setTimeout(() => {
             try {
-                if (typeof QRCode === "undefined") throw new Error("QR library fail");
-                new QRCode(canvas, { text: orderId, width: 200, height: 200, correctLevel : QRCode.CorrectLevel.H });
-                document.getElementById('label-text').innerHTML = `<strong style="font-size:1.2rem;">${partName}</strong><br><span style="color:#666;">ID: ${orderId}</span>`;
-            } catch (e) { alert("⚠️ Data saved, but QR fail. ID: " + orderId); }
-        }, 150);
+                new QRCode(canvas, {
+                    text: orderId,
+                    width: 200,
+                    height: 200,
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+                document.getElementById('label-text').innerHTML = `<strong>${partName}</strong><br>ID: ${orderId}`;
+            } catch (e) {
+                alert("QR Error: " + orderId);
+            }
+        }, 200);
     }
 
     // --- 3. THE NEW DOWNLOAD SCRIPT ---
-    function downloadQR() {
-        // target the source canvas, much more reliable than the img fallback
-        const canvas = document.querySelector('#qrcode-canvas canvas');
-        
-        if (!canvas) {
-            // Unlikely fallback
-            const img = document.querySelector('#qrcode-canvas img');
-            if(img && img.src){ performDownload(img.src); return; }
-            alert("QR image not ready."); return;
+    function downloadQR(event) {
+        // 1. STOPS THE PAGE FROM RELOADING
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
         }
-
+    
+        const canvas = document.querySelector('#qrcode-canvas canvas');
+        const img = document.querySelector('#qrcode-canvas img');
+        const tip = document.getElementById('manual-save-tip');
+    
         try {
-            // explicit conversion to base64 PNG data URL
-            const dataUrl = canvas.toDataURL("image/png");
-            performDownload(dataUrl);
-        } catch(e) {
-            console.error("Download Error:", e);
-            handleDownloadError();
+            // 2. Get the Image Data
+            let dataUrl = "";
+            if (canvas) {
+                dataUrl = canvas.toDataURL("image/png");
+            } else if (img && img.src) {
+                dataUrl = img.src;
+            }
+    
+            if (!dataUrl || dataUrl.startsWith('data:image/svg')) {
+                alert("QR not ready yet. Please wait a second.");
+                return;
+            }
+    
+            // 3. Create the Download Link
+            const filename = `Batch_${generatedInId || currentPartId || 'Label'}.png`;
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = filename;
+    
+            // 4. Mobile Specific Logic
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            
+            if (isIOS) {
+                // iOS often blocks the .click() download. 
+                // We show the tip and let them use the browser's native save.
+                tip.style.display = "block";
+                alert("iOS detected: Please Long-Press the QR code and select 'Save to Photos'.");
+            } else {
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Show tip as a backup
+                tip.style.display = "block";
+            }
+    
+        } catch (err) {
+            console.error("Download Error:", err);
+            document.getElementById('manual-save-tip').style.display = "block";
+            alert("Browser blocked the automatic save. Please Long-Press the QR image to save manually.");
         }
     }
 
