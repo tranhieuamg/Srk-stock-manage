@@ -6,6 +6,7 @@
     <title>Warehouse Pro v4</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --warning: #d39e00; --purple: #6f42c1; --bg: #f4f7f6; --text: #333; }
         body { font-family: -apple-system, sans-serif; margin: 0; padding: 20px; text-align: center; background: var(--bg); color: var(--text); }
@@ -209,18 +210,22 @@
 
 <div id="qr-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center;">
     <div style="background:white; padding:20px; border-radius:12px; width:85%; max-width:350px; text-align:center;">
-        <h3 style="margin-top:0;">Batch Label Ready</h3>
         
-        <div id="qrcode-canvas" style="display:block; margin:20px auto; border:1px solid #eee; padding:10px; background: white;"></div>
+        <div id="label-capture-area" style="background:white; padding:10px;">
+            <div id="qrcode-canvas" style="display:block; margin:0 auto;"></div>
+            <p id="label-text" style="font-size:1rem; font-weight:bold; color:black; margin-top:10px; word-break:break-all;"></p>
+        </div>
+
+        <img id="final-combined-image" style="display:none; width:100%; height:auto; margin-bottom:15px; border:1px solid #eee;">
+
+        <div id="modal-btns">
+            <button type="button" class="btn-unlock" onclick="window.print()">🖨️ Print Label</button>
+            <button type="button" class="btn-download" onclick="downloadQR(event)">💾 Download to Gallery</button>
+            <button type="button" class="btn-cancel" onclick="location.reload()">Done / Next Scan</button>
+        </div>
         
-        <p id="label-text" style="font-size:0.9rem; font-weight:bold; word-break:break-all;"></p>
-        
-        <button type="button" class="btn-unlock" onclick="window.print()">🖨️ Print Label</button>
-        <button type="button" class="btn-download" onclick="downloadQR(event)">💾 Download to Gallery</button>
-        <button type="button" class="btn-cancel" onclick="location.reload()">Done / Next Scan</button>
-        
-        <p id="manual-save-tip" style="display:none; font-size:0.75rem; color:#666; margin-top:10px;">
-            Tip: If download fails, Long-Press the QR code above to save.
+        <p id="manual-save-tip" style="font-size:0.75rem; color:#666; margin-top:10px;">
+            Tip: Long-Press the image above to save manually.
         </p>
     </div>
 </div>
@@ -398,81 +403,69 @@
 
     // Ensure generateLabel populates the variables correctly
     function generateLabel(orderId, partName) {
-        generatedInId = orderId; // Store globally for the downloader
+        generatedInId = orderId;
         const modal = document.getElementById('qr-modal');
-        const canvas = document.getElementById('qrcode-canvas');
-        
-        modal.style.display = 'flex';
-        canvas.innerHTML = ""; 
+        const captureArea = document.getElementById('label-capture-area');
+        const qrContainer = document.getElementById('qrcode-canvas');
+        const finalImg = document.getElementById('final-combined-image');
+        const tip = document.getElementById('manual-save-tip');
     
+        modal.style.display = 'flex';
+        captureArea.style.display = 'block'; // Show to capture
+        finalImg.style.display = 'none'; // Hide the old snapshot
+        qrContainer.innerHTML = ""; 
+    
+        // 1. Generate the QR code first
+        new QRCode(qrContainer, {
+            text: orderId,
+            width: 250,
+            height: 250,
+            correctLevel : QRCode.CorrectLevel.H
+        });
+        
+        document.getElementById('label-text').innerHTML = `${partName}<br><small>${orderId}</small>`;
+    
+        // 2. Wait for the QR to finish rendering, then take a "Snapshot"
         setTimeout(() => {
-            try {
-                new QRCode(canvas, {
-                    text: orderId,
-                    width: 200,
-                    height: 200,
-                    correctLevel : QRCode.CorrectLevel.H
-                });
-                document.getElementById('label-text').innerHTML = `<strong>${partName}</strong><br>ID: ${orderId}`;
-            } catch (e) {
-                alert("QR Error: " + orderId);
-            }
-        }, 200);
+            html2canvas(captureArea, {
+                backgroundColor: "#ffffff",
+                scale: 2 // Higher quality for printing
+            }).then(canvas => {
+                const combinedDataUrl = canvas.toDataURL("image/png");
+                
+                // 3. Hide the "Live" HTML and show the "Flat" Image
+                // This is what allows long-press to save everything
+                captureArea.style.display = 'none';
+                finalImg.src = combinedDataUrl;
+                finalImg.style.display = 'block';
+                tip.style.display = 'block';
+            });
+        }, 500); // Give it half a second to be safe
     }
 
     // --- 3. THE NEW DOWNLOAD SCRIPT ---
     function downloadQR(event) {
-        // 1. STOPS THE PAGE FROM RELOADING
-        if (event) {
-            event.preventDefault();
-            event.stopPropagation();
+        if (event) event.preventDefault();
+        const finalImg = document.getElementById('final-combined-image');
+        
+        if (!finalImg.src) {
+            alert("Image still generating...");
+            return;
         }
     
-        const canvas = document.querySelector('#qrcode-canvas canvas');
-        const img = document.querySelector('#qrcode-canvas img');
-        const tip = document.getElementById('manual-save-tip');
+        const filename = `Label_${generatedInId || 'Batch'}.png`;
+        const link = document.createElement('a');
+        link.href = finalImg.src;
+        link.download = filename;
     
-        try {
-            // 2. Get the Image Data
-            let dataUrl = "";
-            if (canvas) {
-                dataUrl = canvas.toDataURL("image/png");
-            } else if (img && img.src) {
-                dataUrl = img.src;
-            }
-    
-            if (!dataUrl || dataUrl.startsWith('data:image/svg')) {
-                alert("QR not ready yet. Please wait a second.");
-                return;
-            }
-    
-            // 3. Create the Download Link
-            const filename = `Batch_${generatedInId || currentPartId || 'Label'}.png`;
-            const link = document.createElement('a');
-            link.href = dataUrl;
-            link.download = filename;
-    
-            // 4. Mobile Specific Logic
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            
-            if (isIOS) {
-                // iOS often blocks the .click() download. 
-                // We show the tip and let them use the browser's native save.
-                tip.style.display = "block";
-                alert("iOS detected: Please Long-Press the QR code and select 'Save to Photos'.");
-            } else {
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                // Show tip as a backup
-                tip.style.display = "block";
-            }
-    
-        } catch (err) {
-            console.error("Download Error:", err);
-            document.getElementById('manual-save-tip').style.display = "block";
-            alert("Browser blocked the automatic save. Please Long-Press the QR image to save manually.");
+        // Check for iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (isIOS) {
+            alert("iOS detected: Please Long-Press the image and select 'Save to Photos'.");
+        } else {
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     }
 
