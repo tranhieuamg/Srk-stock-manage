@@ -36,37 +36,58 @@
         .preview-box { font-size: 0.75rem; color: #555; background: #e9ecef; padding: 8px; border-radius: 4px; margin-top: 10px; word-break: break-all; }
         .search-results { font-size: 0.8rem; background: #fff; border: 1px solid #ddd; border-radius: 8px; text-align: left; padding: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; }
         
-        /* 1. THE PRINT LAYOUT & CENTERING FIX */
+       /* Styling for the snapshot display */
+        #final-combined-image {
+            display: block;
+            margin: 20px auto;
+            /* This ensures the image stays within your label height constraint */
+            height: 26mm; 
+            width: auto;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* FIX: THE PRINTING FUNCTION */
         @media print {
-            body * { visibility: hidden; }
-            #qr-modal, #qr-modal * { visibility: visible; }
-            #qr-modal {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: auto;
-                background: white;
-                display: flex !important;
-                justify-content: center;
-                align-items: center;
-            }
-            #qr-modal > div {
-                box-shadow: none;
-                border: none;
-                width: 100%;
-                margin: 0 auto;
-                text-align: center;
-            }
-            #qrcode-canvas canvas, #qrcode-canvas img {
-                margin: 0 auto;
-                display: block;
-                max-width: 100%;
-                height: auto;
+            /* Hide the entire web app */
+            body * { visibility: hidden !important; display: none !important; }
+            
+            /* Show ONLY the modal and the image */
+            #qr-modal, #qr-modal * { 
+                visibility: visible !important; 
+                display: flex !important; 
             }
             
-            /* Ensure the download button stands out */
-            .btn-download { background: #17a2b8 !important; color: white !important; }
+            #qr-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: white !important;
+            }
+        
+            /* Target the specific container for the image */
+            #qr-modal > div {
+                border: none !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                max-width: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+        
+            #final-combined-image {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                height: 26mm !important; /* Forces 26mm height on paper */
+                width: auto !important;
+            }
+        
+            /* Hide UI buttons and text during print */
+            #modal-btns, #manual-save-tip, h3, #label-text { display: none !important; }
         }
     </style>
 </head>
@@ -408,39 +429,48 @@
         const captureArea = document.getElementById('label-capture-area');
         const qrContainer = document.getElementById('qrcode-canvas');
         const finalImg = document.getElementById('final-combined-image');
-        const tip = document.getElementById('manual-save-tip');
     
         modal.style.display = 'flex';
-        captureArea.style.display = 'block'; // Show to capture
-        finalImg.style.display = 'none'; // Hide the old snapshot
+        captureArea.style.display = 'block'; 
+        finalImg.style.display = 'none'; 
         qrContainer.innerHTML = ""; 
     
-        // 1. Generate the QR code first
+        // Generate QR
         new QRCode(qrContainer, {
             text: orderId,
-            width: 250,
-            height: 250,
+            width: 300, // Higher resolution for capture
+            height: 300,
             correctLevel : QRCode.CorrectLevel.H
         });
         
-        document.getElementById('label-text').innerHTML = `${partName}<br><small>${orderId}</small>`;
+        document.getElementById('label-text').innerHTML = `${partName}<br>${orderId}`;
     
-        // 2. Wait for the QR to finish rendering, then take a "Snapshot"
         setTimeout(() => {
             html2canvas(captureArea, {
                 backgroundColor: "#ffffff",
-                scale: 2 // Higher quality for printing
-            }).then(canvas => {
-                const combinedDataUrl = canvas.toDataURL("image/png");
+                scale: 2 
+            }).then(originalCanvas => {
+                // --- TRUE ROTATION LOGIC (90° CCW) ---
+                const rotateCanvas = document.createElement('canvas');
+                const ctx = rotateCanvas.getContext('2d');
+    
+                // Swap width and height for a 90-degree turn
+                rotateCanvas.width = originalCanvas.height;
+                rotateCanvas.height = originalCanvas.width;
+    
+                // Move to center, rotate, and draw
+                ctx.translate(0, originalCanvas.width);
+                ctx.rotate(-Math.PI / 2); // 90 degrees CCW
+                ctx.drawImage(originalCanvas, 0, 0);
+    
+                // Convert to final image
+                const rotatedDataUrl = rotateCanvas.toDataURL("image/png");
                 
-                // 3. Hide the "Live" HTML and show the "Flat" Image
-                // This is what allows long-press to save everything
                 captureArea.style.display = 'none';
-                finalImg.src = combinedDataUrl;
+                finalImg.src = rotatedDataUrl;
                 finalImg.style.display = 'block';
-                tip.style.display = 'block';
             });
-        }, 500); // Give it half a second to be safe
+        }, 600);
     }
 
     // --- 3. THE NEW DOWNLOAD SCRIPT ---
