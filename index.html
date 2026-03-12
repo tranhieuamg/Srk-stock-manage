@@ -303,9 +303,35 @@
             });
     }
 
-    function startScanner() { if(!html5QrCode) html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({facingMode:"environment"}, {fps:10, qrbox:250}, onScanSuccess); }
-
-    function onScanSuccess(decodedText) {
+       function startScanner() {
+        if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+        
+        // Explicitly allow both QR and 1D Barcodes
+        const formatsToSupport = [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.UPC_A
+        ];
+    
+        const config = { 
+            fps: 15, 
+            qrbox: { width: 280, height: 150 }, // Adjusted for horizontal barcodes
+            aspectRatio: 1.0,
+            videoConstraints: {
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        };
+    
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            { ...config, formatsToSupport: formatsToSupport }, 
+            onScanSuccess
+        );
+    }    function onScanSuccess(decodedText) {
     const proceed = () => {
         // Hide scanner and manual UI, show controls
         document.getElementById('scanner-view').style.display = 'none';
