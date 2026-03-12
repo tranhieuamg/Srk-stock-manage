@@ -275,13 +275,32 @@
     }
 
     function fetchActiveOrders() {
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`).then(res => res.json()).then(data => {
-            const select = document.getElementById('purpose-order');
-            select.innerHTML = '<option value="" disabled selected>Select Active Order...</option>';
-            if (data.orders.length > 0) {
-                data.orders.forEach(order => { select.innerHTML += `<option value="${order.code}">${order.code} - ${order.customer} (${order.product})</option>`; });
-            } else select.innerHTML = '<option value="" disabled selected>No Active Orders</option>';
-        });
+        const select = document.getElementById('purpose-order');
+        // Show a loading state so staff knows the app is working
+        select.innerHTML = '<option value="" disabled selected>⏳ Fetching Active Orders...</option>';
+    
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`)
+            .then(res => {
+                if (!res.ok) throw new Error("Server Error: " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                // Check if the "orders" key exists in the returned JSON
+                if (data.orders && data.orders.length > 0) {
+                    let html = '<option value="" disabled selected>Select an Active Order...</option>';
+                    data.orders.forEach(order => {
+                        // Create a clean label: "Code - Customer (Product)"
+                        html += `<option value="${order.code}">${order.code} - ${order.customer} (${order.product})</option>`;
+                    });
+                    select.innerHTML = html;
+                } else {
+                    select.innerHTML = '<option value="" disabled selected>❌ No Unfinished Orders Found</option>';
+                }
+            })
+            .catch(err => {
+                console.error("Order Fetch Failed:", err);
+                select.innerHTML = '<option value="" disabled selected>⚠️ Connection Error. Try Again.</option>';
+            });
     }
 
     function startScanner() { if(!html5QrCode) html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({facingMode:"environment"}, {fps:10, qrbox:250}, onScanSuccess); }
@@ -311,9 +330,18 @@
 
     function setActionMode(mode) {
         currentAction = mode;
-        document.getElementById('action-selector').style.display='none'; document.getElementById('movement-form').style.display='block';
-        document.getElementById('po-link-section').style.display = mode==='IN' ? 'block':'none';
-        document.getElementById('order-link-section').style.display = mode==='OUT' ? 'block':'none';
+        document.getElementById('action-selector').style.display='none'; 
+        document.getElementById('movement-form').style.display='block';
+        
+        if (mode === 'IN') {
+            document.getElementById('po-link-section').style.display = 'block';
+            document.getElementById('order-link-section').style.display = 'none';
+        } else {
+            document.getElementById('po-link-section').style.display = 'none';
+            document.getElementById('order-link-section').style.display = 'block';
+            // Refresh the list whenever they go to the Removal screen
+            fetchActiveOrders(); 
+        }
     }
 
     function toggleScenario() { document.getElementById('contract-logic-block').style.display = (document.getElementById('addition-scenario').value === 'contract') ? 'block' : 'none'; updateCodePreview(); }
