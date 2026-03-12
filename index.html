@@ -121,7 +121,7 @@
             <button class="btn-toggle" onclick="showManual()">⌨️ Manual Code</button>
         </div>
         <div id="manual-entry-section" style="display:none;">
-            <input type="number" id="manual-code-input" placeholder="6-Digit Part Code">
+            <input type="text" id="manual-code-input" placeholder="Part ID or Batch ID (e.g. 123456_...)">
             <button class="btn-unlock" onclick="handleManualSubmit()">Find Part</button>
             <button class="btn-toggle" onclick="showScanner()">📷 Scanner</button>
         </div>
@@ -305,28 +305,61 @@
 
     function startScanner() { if(!html5QrCode) html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({facingMode:"environment"}, {fps:10, qrbox:250}, onScanSuccess); }
 
-    function onScanSuccess(code) {
-        const proceed = () => {
-            document.getElementById('scanner-view').style.display='none'; document.getElementById('manual-entry-section').style.display='none'; document.getElementById('controls').style.display='block';
-            const isBatchCode = code.includes('_');
-            currentPartId = isBatchCode ? code.split('_')[0] : code;
-            scannedBatchId = isBatchCode ? code : "";
-            
-            const mode = isBatchCode ? "batch_info" : "stock";
-            fetch(`${GOOGLE_SCRIPT_URL}?mode=${mode}&id=${code}`).then(res=>res.json()).then(data=>{
+    function onScanSuccess(decodedText) {
+    const proceed = () => {
+        // Hide scanner and manual UI, show controls
+        document.getElementById('scanner-view').style.display = 'none';
+        document.getElementById('manual-entry-section').style.display = 'none';
+        document.getElementById('controls').style.display = 'block';
+        
+        const isBatchCode = decodedText.includes('_');
+        // If it's a batch, the Part ID is the first 6 characters
+        currentPartId = isBatchCode ? decodedText.split('_')[0] : decodedText;
+        scannedBatchId = isBatchCode ? decodedText : ""; 
+        
+        // Pick backend mode: batch_info for full codes, stock for 6-digits
+        const mode = isBatchCode ? "batch_info" : "stock";
+
+        // Pre-fill the removal reason if it's a batch
+        if (isBatchCode) {
+            document.getElementById('purpose-order').value = decodedText;
+            // Note: If you have the dropdown enabled, you might want to 
+            // set the dropdown to the matched value or show a 'Batch Override' message
+        }
+
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=${mode}&id=${decodedText}`)
+            .then(res => res.json())
+            .then(data => {
                 const display = document.getElementById('stock-display');
-                if(data.found){
-                    currentPartName=data.name; currentStockValue=Number(data.stock);
-                    document.getElementById('item-name').innerText="✅ "+data.name;
-                    if(isBatchCode) { display.innerText="Batch Remaining: "+data.stock; document.getElementById('item-id').innerText="Batch: "+code;
-                    } else { display.innerText="Total Stock: "+data.stock; document.getElementById('item-id').innerText="Part ID: "+currentPartId; }
+                if(data.found) {
+                    currentPartName = data.name;
+                    currentStockValue = Number(data.stock);
+                    document.getElementById('item-name').innerText = "✅ " + data.name;
+                    
+                    if(isBatchCode) {
+                        display.innerText = "Batch Remaining: " + data.stock;
+                        document.getElementById('item-id').innerText = "Batch: " + decodedText;
+                    } else {
+                        display.innerText = "Total Stock: " + data.stock;
+                        document.getElementById('item-id').innerText = "Part ID: " + currentPartId;
+                    }
+                    
                     display.style.color = currentStockValue < 10 ? "var(--warning)" : "var(--text)";
-                    if(currentStockValue <= 0) { display.style.color="var(--danger)"; display.innerText="OUT OF STOCK"; }
-                } else { alert("Not Found or Empty"); location.reload(); }
+                    if(currentStockValue <= 0) { display.style.color = "var(--danger)"; display.innerText += " (EMPTY)"; }
+                } else { 
+                    alert("ID not found in database."); 
+                    location.reload(); 
+                }
             });
-        };
-        if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed); else proceed();
+    };
+    
+    // Stop the scanner if it's running
+    if(html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(proceed).catch(proceed);
+    } else {
+        proceed();
     }
+}
 
     function setActionMode(mode) {
         currentAction = mode;
@@ -477,8 +510,24 @@
 
     function showManual() { document.getElementById('scanner-view').style.display='none'; document.getElementById('manual-entry-section').style.display='block'; }
     function showScanner() { document.getElementById('manual-entry-section').style.display='none'; document.getElementById('scanner-view').style.display='block'; startScanner(); }
-    function handleManualSubmit() { const c = document.getElementById('manual-code-input').value; if(c) onScanSuccess(c); else alert("Enter Code"); }
-
+    function handleManualSubmit() {
+        const input = document.getElementById('manual-code-input').value.trim();
+        
+        if (!input) {
+            alert("Please enter a Code.");
+            return;
+        }
+    
+        // Validation logic
+        const isBatch = input.includes('_');
+        const isGeneralPart = (input.length === 6 && !isNaN(input));
+    
+        if (isBatch || isGeneralPart) {
+            onScanSuccess(input); // Pass the manual text to the existing scan logic
+        } else {
+            alert("Invalid format. Please enter a 6-digit Part Code or a full Stocking Order ID.");
+        }
+    }        
     // Ensure generateLabel populates the variables correctly
     function generateLabel(orderId, partName) {
         generatedInId = orderId;
