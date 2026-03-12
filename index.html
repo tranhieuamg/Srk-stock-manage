@@ -305,33 +305,49 @@
 
        function startScanner() {
         if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-        
-        // Explicitly allow both QR and 1D Barcodes
+    
+        // 1. Defining formats explicitly sometimes crashes older browsers. 
+        // We'll use a safer list or let it default if needed.
         const formatsToSupport = [
             Html5QrcodeSupportedFormats.QR_CODE,
             Html5QrcodeSupportedFormats.EAN_13,
             Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.UPC_A
+            Html5QrcodeSupportedFormats.CODE_39
         ];
     
         const config = { 
-            fps: 15, 
-            qrbox: { width: 280, height: 150 }, // Adjusted for horizontal barcodes
-            aspectRatio: 1.0,
+            fps: 20, // Increased for faster barcode tracking
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+                // Dynamic sizing: Wide for barcodes, tall enough for QR
+                return {
+                    width: viewfinderWidth * 0.8,
+                    height: viewfinderHeight * 0.4
+                };
+            },
+            // REMOVED fixed aspectRatio which causes most camera crashes
             videoConstraints: {
-                facingMode: "environment",
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
+                facingMode: "environment"
+                // We removed width/height ideals here to let the phone pick its native resolution
             }
         };
     
         html5QrCode.start(
             { facingMode: "environment" }, 
-            { ...config, formatsToSupport: formatsToSupport }, 
-            onScanSuccess
-        );
-    }    function onScanSuccess(decodedText) {
+            config, 
+            onScanSuccess,
+            (errorMessage) => {
+                // This prevents the "Turning off" loop by ignoring minor focus errors
+                // console.log(errorMessage); 
+            }
+        ).catch(err => {
+            console.error("Scanner Start Error:", err);
+            // Fallback: Try starting with NO formats specified if the first attempt fails
+            alert("Camera failed. Retrying in compatibility mode...");
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
+        });
+    }
+    
+    function onScanSuccess(decodedText) {
     const proceed = () => {
         // Hide scanner and manual UI, show controls
         document.getElementById('scanner-view').style.display = 'none';
