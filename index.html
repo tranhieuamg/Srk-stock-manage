@@ -419,11 +419,40 @@
     }
 
     function submitNewOrder() {
-        const c=document.getElementById('cust-name').value, p=document.getElementById('order-prod').value, d=document.getElementById('order-deadline').value;
-        if(!c || !p || !d){ alert("Required missing"); return; }
+        const c = document.getElementById('cust-name').value;
+        const p = document.getElementById('order-prod').value;
+        const d = document.getElementById('order-deadline').value;
+        const detailsVal = document.getElementById('order-details').value; // <--- GET THE VALUE
+        const poVal = document.getElementById('order-po').value;
+    
+        if(!c || !p || !d){ 
+            alert("Please fill in Customer, Product, and Deadline."); 
+            return; 
+        }
+    
         document.getElementById('order-submit-btn').disabled = true;
-        fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify({ type:"NEW_ORDER", customer:c, product:p, deadline:d, poNumber:document.getElementById('order-po').value })
-        }).then(res=>res.json()).then(data=>{ alert(`Order Created: ${data.code}`); location.reload(); });
+        document.getElementById('order-submit-btn').innerText = "⏳ Creating...";
+    
+        fetch(GOOGLE_SCRIPT_URL, { 
+            method: "POST", 
+            body: JSON.stringify({ 
+                type: "NEW_ORDER", 
+                customer: c, 
+                product: p, 
+                deadline: d, 
+                details: detailsVal, // <--- SEND AS 'details'
+                poNumber: poVal 
+            })
+        })
+        .then(res => res.json())
+        .then(data => { 
+            alert(`Order Created Successfully! Code: ${data.code}`); 
+            location.reload(); 
+        })
+        .catch(err => {
+            alert("Error creating order.");
+            document.getElementById('order-submit-btn').disabled = false;
+        });
     }
 
     function findOrderForEdit() {
