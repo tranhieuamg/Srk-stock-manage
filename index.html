@@ -217,13 +217,27 @@
         </div>
         <div class="sub-section" style="border-top: 4px solid var(--purple);">
             <h3>Update Order Status</h3>
-            <input type="number" id="search-order-id" placeholder="Enter 6-digit Order Code">
-            <button class="btn-unlock" onclick="findOrderForEdit()">Search Order</button>
-            <div id="order-edit-controls" style="display:none; margin-top:15px; background:#f9f9f9; padding:15px; border-radius:8px; text-align: left;">
+            
+            <div style="margin-bottom: 10px;">
+                <input type="number" id="search-order-id" placeholder="Enter 6-digit Order Code">
+                <button type="button" class="btn-unlock" onclick="findOrderForEdit(document.getElementById('search-order-id').value)">🔍 Search by ID</button>
+            </div>
+        
+            <div style="margin: 15px 0; color: #888; font-size: 0.8rem;">— OR —</div>
+        
+            <div style="margin-bottom: 10px;">
+                <button type="button" class="btn-purple" onclick="fetchOrdersForUpdate()">📋 Fetch Unfinished List</button>
+                <select id="unfinished-order-list" style="display:none; margin-top:10px;" onchange="findOrderForEdit(this.value)">
+                    <option value="" disabled selected>Select an order...</option>
+                </select>
+            </div>
+            
+            <div id="order-edit-controls" style="display:none; margin-top:15px; background:#f9f9f9; padding:15px; border-radius:8px; text-align: left; border: 1px solid #ddd;">
+                <p><strong>Order ID:</strong> <span id="edit-id-display" style="color:var(--purple); font-weight:bold;"></span></p>
                 <p><strong>Customer:</strong> <span id="edit-cust"></span></p>
                 <p><strong>Product:</strong> <span id="edit-prod"></span></p>
                 <p><strong>Status:</strong> <span id="edit-status" style="font-weight: bold;"></span></p>
-                <button id="status-toggle-btn" style="width:100%; margin-top:10px;" onclick="toggleOrderStatus()"></button>
+                <button type="button" id="status-toggle-btn" style="width:100%; margin-top:10px;" onclick="toggleOrderStatus()"></button>
             </div>
         </div>
     </div>
@@ -530,17 +544,66 @@
         });
     }
 
-    function findOrderForEdit() {
-        const id = document.getElementById('search-order-id').value;
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`).then(res => res.json()).then(data => {
-            if (data.found) {
-                currentEditOrderCode = id; currentEditStatus = data.status;
-                document.getElementById('edit-cust').innerText = data.customer; document.getElementById('edit-prod').innerText = data.product; document.getElementById('edit-status').innerText = data.status; document.getElementById('order-edit-controls').style.display = 'block';
-                const btn = document.getElementById('status-toggle-btn');
-                btn.innerText = data.status === "Unfinished" ? "Mark as Finished" : "Re-open Order";
-                btn.style.background = data.status === "Unfinished" ? "var(--success)" : "var(--warning)"; btn.style.color = "white";
-            } else alert("Order not found.");
-        });
+    // FETCH: Get the list of unfinished orders specifically for the management screen
+    function fetchOrdersForUpdate() {
+        const btn = event.target;
+        const select = document.getElementById('unfinished-order-list');
+        
+        btn.disabled = true;
+        btn.innerText = "⏳ Fetching...";
+    
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`)
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerText = "📋 Refresh List";
+                select.style.display = "block";
+                
+                select.innerHTML = '<option value="" disabled selected>Choose an Unfinished Order...</option>';
+                if (data.orders && data.orders.length > 0) {
+                    data.orders.forEach(order => {
+                        select.innerHTML += `<option value="${order.code}">${order.code} - ${order.customer}</option>`;
+                    });
+                } else {
+                    alert("No unfinished orders found in the system.");
+                    select.style.display = "none";
+                }
+            })
+            .catch(err => {
+                alert("Connection error. Check script URL.");
+                btn.disabled = false;
+                btn.innerText = "📋 Fetch Unfinished List";
+            });
+    }
+    
+    // FIND: Reusable function that populates the edit box
+    function findOrderForEdit(id) {
+        if (!id) return;
+    
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.found) {
+                    currentEditOrderCode = id;
+                    currentEditStatus = data.status;
+                    
+                    document.getElementById('edit-id-display').innerText = id;
+                    document.getElementById('edit-cust').innerText = data.customer;
+                    document.getElementById('edit-prod').innerText = data.product;
+                    document.getElementById('edit-status').innerText = data.status;
+                    document.getElementById('order-edit-controls').style.display = 'block';
+                    
+                    const btn = document.getElementById('status-toggle-btn');
+                    btn.innerText = data.status === "Unfinished" ? "✅ Mark as Finished" : "🔄 Re-open Order";
+                    btn.style.background = data.status === "Unfinished" ? "var(--success)" : "var(--warning)";
+                    btn.style.color = "white";
+                    
+                    // Scroll to the controls so the staff sees them on mobile
+                    document.getElementById('order-edit-controls').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert("Order code " + id + " not found.");
+                }
+            });
     }
 
     function toggleOrderStatus() {
