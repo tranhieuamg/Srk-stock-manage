@@ -111,6 +111,7 @@
         <h2>Dashboard</h2>
         <button class="btn-unlock" onclick="showPage('stock')">📦 Stock Management</button>
         <button class="btn-purple" onclick="showPage('order')">📝 Order Management</button>
+        <button class="btn-toggle" style="background:#00bcd4;" onclick="showPage('task')">📋 Task Management</button>
         <p onclick="logout()" style="color:grey; text-decoration:underline; cursor:pointer;">Log out</p>
     </div>
 
@@ -241,6 +242,52 @@
             </div>
         </div>
     </div>
+
+    <div id="task-page" style="display:none;">
+        <button class="btn-toggle" onclick="showPage('menu')">⬅ Back</button>
+        
+        <div id="task-menu">
+            <button class="btn-add" onclick="showTaskAction('add')">➕ Add a New Task</button>
+            <button class="btn-purple" onclick="showTaskAction('update')">🔄 Update Task Status</button>
+        </div>
+    
+        <div id="add-task-section" class="sub-section" style="display:none;">
+            <h3>Create New Task</h3>
+            <input type="text" id="task-content" placeholder="What needs to be done?">
+            
+            <label>Link to Order/Project:</label>
+            <div class="btn-group-inline">
+                <button type="button" class="btn-toggle" onclick="fetchOrdersForTasks()">Load Orders</button>
+            </div>
+            <select id="task-order-link">
+                <option value="R&D Project">R&D Project</option>
+            </select>
+    
+            <label>Assign to (PIC):</label>
+            <select id="task-pic">
+                <option value="Hieu">Hieu</option>
+                <option value="Trung">Trung</option>
+                <option value="Cuong">Cuong</option>
+                <option value="Vinh">Vinh</option>
+            </select>
+    
+            <label>Task Deadline:</label>
+            <input type="date" id="task-deadline">
+            
+            <button class="btn-add" id="task-submit-btn" onclick="submitNewTask()">🚀 Submit Task</button>
+            <button class="btn-cancel" onclick="showTaskAction('menu')">Cancel</button>
+        </div>
+    
+        <div id="update-task-section" class="sub-section" style="display:none;">
+            <h3>Close Task</h3>
+            <button type="button" class="btn-purple" onclick="fetchActiveTasks()">Refresh Task List</button>
+            <select id="unfinished-task-list" style="margin-top:15px;">
+                <option value="" disabled selected>Select a task to finish...</option>
+            </select>
+            <button class="btn-add" id="task-update-btn" onclick="submitTaskUpdate()">✅ Mark as Finished</button>
+            <button class="btn-cancel" onclick="showTaskAction('menu')">Cancel</button>
+        </div>
+    </div>
 </div>
 
 <div id="qr-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center;">
@@ -281,13 +328,76 @@
     function checkPin() { if (document.getElementById('pin-input').value === MY_M_K) { localStorage.setItem("warehouse_authenticated", "true"); localStorage.setItem("warehouse_staff_name", document.getElementById('staff-name').value); location.reload(); } else alert("Denied"); }
     function logout() { localStorage.clear(); location.reload(); }
     function showPage(page) {
-        document.getElementById('dashboard-menu').style.display='none'; document.getElementById('stock-page').style.display='none'; document.getElementById('order-page').style.display='none';
-        if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
+        // Update this function to include 'task-page'
+        document.getElementById('dashboard-menu').style.display='none'; 
+        document.getElementById('stock-page').style.display='none'; 
+        document.getElementById('order-page').style.display='none';
+        document.getElementById('task-page').style.display='none';
+        
         if(page==='menu') document.getElementById('dashboard-menu').style.display='block';
-        if(page==='stock') { document.getElementById('stock-page').style.display='block'; startScanner(); }
+        if(page==='stock') document.getElementById('stock-page').style.display='block';
         if(page==='order') document.getElementById('order-page').style.display='block';
+        if(page==='task') document.getElementById('task-page').style.display='block';
     }
-
+    
+    function showTaskAction(action) {
+        document.getElementById('task-menu').style.display = action === 'menu' ? 'block' : 'none';
+        document.getElementById('add-task-section').style.display = action === 'add' ? 'block' : 'none';
+        document.getElementById('update-task-section').style.display = action === 'update' ? 'block' : 'none';
+    }
+    
+    // FETCH ORDERS FOR TASK LINKING
+    function fetchOrdersForTasks() {
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`)
+            .then(res => res.json())
+            .then(data => {
+                const select = document.getElementById('task-order-link');
+                select.innerHTML = '<option value="R&D Project">R&D Project</option>';
+                data.orders.forEach(o => {
+                    select.innerHTML += `<option value="${o.code}">${o.code} - ${o.customer}</option>`;
+                });
+            });
+    }
+    
+    // FETCH UNFINISHED TASKS
+    function fetchActiveTasks() {
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_tasks`)
+            .then(res => res.json())
+            .then(data => {
+                const select = document.getElementById('unfinished-task-list');
+                select.innerHTML = '<option value="" disabled selected>Select an unfinished task...</option>';
+                data.tasks.forEach(t => {
+                    select.innerHTML += `<option value="${t.rowIndex}">${t.pic}: ${t.content} (${t.order})</option>`;
+                });
+            });
+    }
+    
+    function submitNewTask() {
+        const content = document.getElementById('task-content').value;
+        const order = document.getElementById('task-order-link').value;
+        const pic = document.getElementById('task-pic').value;
+        const deadline = document.getElementById('task-deadline').value;
+    
+        if(!content || !deadline) { alert("Please fill content and deadline"); return; }
+    
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({
+                type: "NEW_TASK", content: content, orderCode: order, pic: pic, deadline: deadline
+            })
+        }).then(() => { alert("Task Added!"); location.reload(); });
+    }
+    
+    function submitTaskUpdate() {
+        const rowIndex = document.getElementById('unfinished-task-list').value;
+        if(!rowIndex) return;
+    
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({ type: "UPDATE_TASK_STATUS", rowIndex: rowIndex })
+        }).then(() => { alert("Task Finished!"); location.reload(); });
+    }
+    
     function fetchActiveOrders() {
         const select = document.getElementById('purpose-order');
         // Show a loading state so staff knows the app is working
