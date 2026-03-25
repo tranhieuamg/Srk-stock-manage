@@ -303,6 +303,38 @@
         document.getElementById('update-task-section').style.display = action === 'update' ? 'block' : 'none';
     }
 
+    function fetchActiveTasks() {
+        const select = document.getElementById('unfinished-task-list');
+        const btn = event.target;
+        
+        btn.disabled = true;
+        btn.innerText = "⏳ Loading...";
+    
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_tasks`)
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerText = "Refresh Task List";
+                
+                select.innerHTML = '<option value="" disabled selected>Select a task to finish...</option>';
+                
+                if (data.tasks && data.tasks.length > 0) {
+                    data.tasks.forEach(t => {
+                        // This creates a clean label: "PIC: Task (Order #)"
+                        select.innerHTML += `<option value="${t.rowIndex}">${t.pic}: ${t.content} [${t.order}]</option>`;
+                    });
+                } else {
+                    alert("No unfinished tasks found in the Spreadsheet.");
+                }
+            })
+            .catch(err => {
+                console.error("Task Fetch Error:", err);
+                btn.disabled = false;
+                btn.innerText = "Refresh Task List";
+                alert("Connection error. Is the Script URL correct?");
+            });
+    }
+    
     function fetchActiveOrders() {
         const select = document.getElementById('purpose-order');
         select.innerHTML = '<option value="" disabled selected>⏳ Fetching...</option>';
