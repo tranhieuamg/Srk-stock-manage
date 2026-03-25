@@ -565,6 +565,42 @@
         });
     }
 
+    function fetchOrdersForTasks() {
+        const select = document.getElementById('task-order-link');
+        const btn = event.target; // Grabs the button you just clicked
+    
+        btn.disabled = true;
+        btn.innerText = "⏳ Loading...";
+    
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`)
+            .then(res => {
+                if (!res.ok) throw new Error("HTTP error " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                btn.disabled = false;
+                btn.innerText = "Load Orders";
+    
+                // Reset with default option
+                select.innerHTML = '<option value="R&D Project">R&D Project</option>';
+    
+                if (data.orders && data.orders.length > 0) {
+                    data.orders.forEach(o => {
+                        select.innerHTML += `<option value="${o.code}">${o.code} - ${o.customer}</option>`;
+                    });
+                    alert("✅ Active Orders Loaded into the list!");
+                } else {
+                    alert("No active orders found in the system.");
+                }
+            })
+            .catch(err => {
+                console.error("Task Order Fetch Error:", err);
+                btn.disabled = false;
+                btn.innerText = "Load Orders";
+                alert("Connection error. Check your Internet or Script URL.");
+            });
+    }
+
     function findOrderForEdit(id) {
         fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`).then(res => res.json()).then(data => {
             if (data.found) {
