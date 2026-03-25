@@ -354,6 +354,58 @@
             });
     }
 
+    function submitNewTask() {
+        // 1. Grab all the inputs
+        const contentInput = document.getElementById('task-content');
+        const orderInput = document.getElementById('task-order-link');
+        const picInput = document.getElementById('task-pic');
+        const deadlineInput = document.getElementById('task-deadline');
+        const btn = document.getElementById('task-submit-btn');
+    
+        // 2. Simple Validation
+        if(!contentInput.value || !deadlineInput.value) { 
+            alert("⚠️ Please fill in both the Task Content and the Deadline."); 
+            return; 
+        }
+    
+        // 3. Visual Feedback (Prevents double-clicking)
+        btn.disabled = true;
+        btn.innerText = "⏳ Saving Task...";
+    
+        // 4. Send the data
+        const payload = {
+            type: "NEW_TASK", 
+            content: contentInput.value, 
+            orderCode: orderInput.value, 
+            pic: picInput.value, 
+            deadline: deadlineInput.value
+        };
+    
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            // We don't necessarily need to parse JSON here since we just want to know it's done
+            alert("✅ Task Added Successfully!");
+            
+            // Soft reset: go back to the task menu and clear the fields
+            contentInput.value = "";
+            deadlineInput.value = "";
+            showTaskAction('menu');
+            
+            // Reset button
+            btn.disabled = false;
+            btn.innerText = "🚀 Submit Task";
+        })
+        .catch(err => {
+            console.error("Submission Error:", err);
+            alert("❌ Failed to save task. Check your internet or Google Script deployment.");
+            btn.disabled = false;
+            btn.innerText = "🚀 Submit Task";
+        });
+    }
+    
     function submitTaskUpdate() {
         const select = document.getElementById('unfinished-task-list');
         const rowIndex = select.value; // This is the t.rowIndex we saved earlier
