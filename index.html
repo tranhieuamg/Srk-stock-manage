@@ -143,7 +143,7 @@
                     <div id="order-code-input-block" style="display:none; margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 15px;">
                         <label>Select Active Order:</label>
                         <div class="btn-group-inline">
-                            <button type="button" class="btn-purple" onclick="fetchActiveOrders()">📋 Fetch Active Orders</button>
+                            <button type="button" class="btn-purple" onclick="fetchActiveOrders(true)">📋 Fetch Active Orders</button>
                         </div>
                         <select id="purpose-order" onchange="checkOrderSelection()">
                             <option value="" disabled selected>Press Fetch to load...</option>
@@ -260,8 +260,14 @@
     let isOrderValid=false, currentStockValue=0, generatedInId = "";
     let currentEditOrderCode = "", currentEditStatus = "";
 
-    window.onload = () => { if(localStorage.getItem("warehouse_authenticated")==="true"){ document.getElementById('login-overlay').style.display='none'; document.getElementById('main-app').style.display='block'; fetchActiveOrders(); } };
-
+    // Update onload to pass 'false' (Silent mode)
+    window.onload = () => { 
+        if(localStorage.getItem("warehouse_authenticated") === "true"){ 
+            document.getElementById('login-overlay').style.display = 'none'; 
+            document.getElementById('main-app').style.display = 'block'; 
+            fetchActiveOrders(false); // <--- Added 'false' here
+        } 
+    };
     function checkPin() { if (document.getElementById('pin-input').value === MY_M_K) { localStorage.setItem("warehouse_authenticated", "true"); localStorage.setItem("warehouse_staff_name", document.getElementById('staff-name').value); location.reload(); } else alert("Denied"); }
     function logout() { localStorage.clear(); location.reload(); }
 
@@ -391,9 +397,10 @@
             btn.innerText = "✅ Mark as Finished";
         });
     }
-    function fetchActiveOrders() {
+    // Update the Fetch function to accept a 'isManual' parameter
+    function fetchActiveOrders(isManual = false) {
         const select = document.getElementById('purpose-order');
-        const btn = event ? event.target : null;
+        const btn = isManual ? document.querySelector('.btn-purple[onclick*="fetchActiveOrders"]') : null;
         
         if(btn) {
             btn.disabled = true;
@@ -412,14 +419,14 @@
                 
                 if (data.orders && data.orders.length > 0) {
                     data.orders.forEach(order => {
-                        // Displays as: "123456 - Customer Name"
                         select.innerHTML += `<option value="${order.code}">${order.code} - ${order.customer}</option>`;
                     });
-                    // Alert the staff if they were waiting
-                    if(btn) alert("Orders loaded!");
+                    
+                    // ONLY show the alert if the staff actually clicked the button
+                    if(isManual) alert("✅ Orders loaded!"); 
                 } else {
                     select.innerHTML = '<option value="" disabled selected>❌ No Unfinished Orders</option>';
-                    alert("No unfinished orders found in the Spreadsheet.");
+                    if(isManual) alert("No unfinished orders found.");
                 }
             })
             .catch(err => {
@@ -427,7 +434,7 @@
                     btn.disabled = false;
                     btn.innerText = "📋 Fetch Active Orders";
                 }
-                alert("Error: Could not connect to Google Sheets.");
+                if(isManual) alert("Error connecting to Sheets.");
             });
     }
     
