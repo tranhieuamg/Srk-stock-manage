@@ -342,7 +342,50 @@
                 alert("Connection error. Is the Script URL correct?");
             });
     }
+
+    function submitTaskUpdate() {
+        const select = document.getElementById('unfinished-task-list');
+        const rowIndex = select.value; // This is the t.rowIndex we saved earlier
     
+        if (!rowIndex) {
+            alert("Please select a task from the list first!");
+            return;
+        }
+    
+        const btn = document.getElementById('task-update-btn');
+        btn.disabled = true;
+        btn.innerText = "⏳ Updating...";
+    
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors", // Use this if you face CORS issues, otherwise remove it
+            body: JSON.stringify({ 
+                type: "UPDATE_TASK_STATUS", 
+                rowIndex: rowIndex 
+            })
+        })
+        .then(() => {
+            // Because Google Apps Script 'POST' often blocks 'res.json()' 
+            // in some browsers, we check for completion this way:
+            alert("✅ Task marked as Finished!");
+            
+            // Option 1: Just refresh the list so the task disappears
+            fetchActiveTasks(); 
+            
+            // Option 2: Full reset to the menu (Cleaner)
+            showTaskAction('menu');
+            
+            // Reset button
+            btn.disabled = false;
+            btn.innerText = "✅ Mark as Finished";
+        })
+        .catch(err => {
+            console.error("Update Error:", err);
+            alert("Error updating task. Check your internet connection.");
+            btn.disabled = false;
+            btn.innerText = "✅ Mark as Finished";
+        });
+    }
     function fetchActiveOrders() {
         const select = document.getElementById('purpose-order');
         select.innerHTML = '<option value="" disabled selected>⏳ Fetching...</option>';
