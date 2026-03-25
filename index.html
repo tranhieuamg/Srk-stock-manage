@@ -139,11 +139,16 @@
                         <option value="For Post Processing">For Post Processing</option>
                         <option value="For Making an Order">For Making an Order</option>
                     </select>
-                    <div id="order-code-input-block" style="display:none;">
+                
+                    <div id="order-code-input-block" style="display:none; margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 15px;">
                         <label>Select Active Order:</label>
+                        <div class="btn-group-inline">
+                            <button type="button" class="btn-purple" onclick="fetchActiveOrders()">📋 Fetch Active Orders</button>
+                        </div>
                         <select id="purpose-order" onchange="checkOrderSelection()">
-                            <option value="" disabled selected>Loading Active Orders...</option>
+                            <option value="" disabled selected>Press Fetch to load...</option>
                         </select>
+                        
                         <div class="checkbox-container">
                             <input type="checkbox" id="wasted-check">
                             <label for="wasted-check" style="color:var(--danger);">Wasted in assembly?</label>
@@ -388,16 +393,56 @@
     }
     function fetchActiveOrders() {
         const select = document.getElementById('purpose-order');
-        select.innerHTML = '<option value="" disabled selected>⏳ Fetching...</option>';
+        const btn = event ? event.target : null;
+        
+        if(btn) {
+            btn.disabled = true;
+            btn.innerText = "⏳ Fetching...";
+        }
+    
         fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`)
             .then(res => res.json())
             .then(data => {
+                if(btn) {
+                    btn.disabled = false;
+                    btn.innerText = "📋 Refresh Orders";
+                }
+    
+                select.innerHTML = '<option value="" disabled selected>Select an Active Order...</option>';
+                
                 if (data.orders && data.orders.length > 0) {
-                    let html = '<option value="" disabled selected>Select an Active Order...</option>';
-                    data.orders.forEach(order => { html += `<option value="${order.code}">${order.code} - ${order.customer}</option>`; });
-                    select.innerHTML = html;
-                } else select.innerHTML = '<option value="" disabled selected>No Orders Found</option>';
+                    data.orders.forEach(order => {
+                        // Displays as: "123456 - Customer Name"
+                        select.innerHTML += `<option value="${order.code}">${order.code} - ${order.customer}</option>`;
+                    });
+                    // Alert the staff if they were waiting
+                    if(btn) alert("Orders loaded!");
+                } else {
+                    select.innerHTML = '<option value="" disabled selected>❌ No Unfinished Orders</option>';
+                    alert("No unfinished orders found in the Spreadsheet.");
+                }
+            })
+            .catch(err => {
+                if(btn) {
+                    btn.disabled = false;
+                    btn.innerText = "📋 Fetch Active Orders";
+                }
+                alert("Error: Could not connect to Google Sheets.");
             });
+    }
+    
+    function handleReasonChange() {
+        const reason = document.getElementById('removal-reason').value;
+        const block = document.getElementById('order-code-input-block');
+        
+        if (reason === "For Making an Order") {
+            block.style.display = 'block';
+            // We don't auto-fetch here to save data; we let the staff press the button
+            isOrderValid = false; 
+        } else {
+            block.style.display = 'none';
+            isOrderValid = true; // No order link required for testing/processing
+        }
     }
 
     function startScanner() {
