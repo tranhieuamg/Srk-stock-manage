@@ -261,21 +261,28 @@
     function logout() { localStorage.clear(); location.reload(); }
 
     function showPage(page) {
-        document.getElementById('dashboard-menu').style.display='none'; 
-        document.getElementById('stock-page').style.display='none'; 
-        document.getElementById('order-page').style.display='none';
-        document.getElementById('task-page').style.display='none';
+        // 1. Hide every top-level section first
+        document.getElementById('dashboard-menu').style.display = 'none'; 
+        document.getElementById('stock-page').style.display = 'none'; 
+        document.getElementById('order-page').style.display = 'none';
+        document.getElementById('task-page').style.display = 'none';
         
-        // Stop scanner if navigating away from stock
+        // 2. Stop scanner if moving away from Stock
         if(html5QrCode && html5QrCode.isScanning && page !== 'stock') html5QrCode.stop();
-
-        if(page==='menu') document.getElementById('dashboard-menu').style.display='block';
-        if(page==='stock') { 
-            document.getElementById('stock-page').style.display='block';
-            startScanner(); // FIX: Scanner starts automatically
+    
+        // 3. Show the requested page
+        if(page === 'menu') {
+            document.getElementById('dashboard-menu').style.display = 'block';
+        } else if(page === 'stock') { 
+            document.getElementById('stock-page').style.display = 'block';
+            startScanner(); 
+        } else if(page === 'order') {
+            document.getElementById('order-page').style.display = 'block';
+        } else if(page === 'task') {
+            document.getElementById('task-page').style.display = 'block';
+            // FIX: Always reset the Task internal menu when entering this page
+            showTaskAction('menu'); 
         }
-        if(page==='order') document.getElementById('order-page').style.display='block';
-        if(page==='task') document.getElementById('task-page').style.display='block';
     }
 
     // FIX: Optimized "Next Scan" function
@@ -298,9 +305,10 @@
     }
 
     function showTaskAction(action) {
-        document.getElementById('task-menu').style.display = action === 'menu' ? 'block' : 'none';
-        document.getElementById('add-task-section').style.display = action === 'add' ? 'block' : 'none';
-        document.getElementById('update-task-section').style.display = action === 'update' ? 'block' : 'none';
+        // This ensures ONLY the chosen sub-section is visible
+        document.getElementById('task-menu').style.display = (action === 'menu') ? 'block' : 'none';
+        document.getElementById('add-task-section').style.display = (action === 'add') ? 'block' : 'none';
+        document.getElementById('update-task-section').style.display = (action === 'update') ? 'block' : 'none';
     }
 
     function fetchActiveTasks() {
