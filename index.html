@@ -609,6 +609,58 @@
         document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
 
+    function submitNewOrder() {
+        // 1. Capture inputs
+        const c = document.getElementById('cust-name');
+        const p = document.getElementById('order-prod');
+        const d = document.getElementById('order-deadline');
+        const det = document.getElementById('order-details');
+        const po = document.getElementById('order-po');
+        const btn = document.getElementById('order-submit-btn');
+    
+        // 2. Validation
+        if (!c.value || !p.value || !d.value) { 
+            alert("⚠️ Please fill in Customer Name, Product, and Deadline."); 
+            return; 
+        }
+    
+        // 3. UI Feedback
+        btn.disabled = true;
+        btn.innerText = "⏳ Creating Order...";
+    
+        const payload = { 
+            type: "NEW_ORDER", 
+            customer: c.value, 
+            product: p.value, 
+            deadline: d.value, 
+            details: det.value, 
+            poNumber: po.value 
+        };
+    
+        console.log("Sending Order:", payload);
+    
+        fetch(GOOGLE_SCRIPT_URL, { 
+            method: "POST", 
+            // Using 'no-cors' is safer for Google Apps Script on mobile browsers
+            mode: "no-cors", 
+            body: JSON.stringify(payload)
+        })
+        .then(() => {
+            // Because 'no-cors' doesn't let us read the JSON response, 
+            // we assume success if the fetch completes without an error.
+            alert("✅ Order Submitted! (Note: Check spreadsheet for the generated 6-digit code)");
+            
+            // Clear fields and reload to refresh the 'Active Orders' lists
+            location.reload(); 
+        })
+        .catch(err => {
+            console.error("Fetch Error:", err);
+            alert("❌ Error: Could not connect to the server.");
+            btn.disabled = false;
+            btn.innerText = "🚀 Create Order";
+        });
+    }
+    
     function fetchOrdersForUpdate() {
         const select = document.getElementById('unfinished-order-list');
         fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`).then(res => res.json()).then(data => {
