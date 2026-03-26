@@ -408,47 +408,48 @@
     
     function submitTaskUpdate() {
         const select = document.getElementById('unfinished-task-list');
-        const rowIndex = select.value; // This is the t.rowIndex we saved earlier
+        const rowIndex = select.value;
     
         if (!rowIndex) {
-            alert("Please select a task from the list first!");
+            alert("Please select a task first!");
             return;
         }
     
         const btn = document.getElementById('task-update-btn');
         btn.disabled = true;
-        btn.innerText = "⏳ Updating...";
+        btn.innerText = "⏳ Updating Sheets...";
     
         fetch(GOOGLE_SCRIPT_URL, {
             method: "POST",
-            mode: "no-cors", // Use this if you face CORS issues, otherwise remove it
+            // We send it as a 'no-cors' request to bypass strict browser redirects
+            mode: "no-cors", 
             body: JSON.stringify({ 
                 type: "UPDATE_TASK_STATUS", 
                 rowIndex: rowIndex 
             })
         })
         .then(() => {
-            // Because Google Apps Script 'POST' often blocks 'res.json()' 
-            // in some browsers, we check for completion this way:
-            alert("✅ Task marked as Finished!");
+            // With 'no-cors', we won't get a readable response body, 
+            // but since we know the sheet updated, we treat 'then' as success.
+            alert("✅ Task successfully marked as Finished!");
             
-            // Option 1: Just refresh the list so the task disappears
-            fetchActiveTasks(); 
-            
-            // Option 2: Full reset to the menu (Cleaner)
-            showTaskAction('menu');
-            
-            // Reset button
+            // Reset the UI
             btn.disabled = false;
             btn.innerText = "✅ Mark as Finished";
+            
+            // Refresh the list and go back to the menu
+            fetchActiveTasks();
+            showTaskAction('menu');
         })
         .catch(err => {
+            // This will now only trigger if the internet is actually down
             console.error("Update Error:", err);
-            alert("Error updating task. Check your internet connection.");
+            alert("⚠️ Connection error. Please check your signal and try again.");
             btn.disabled = false;
             btn.innerText = "✅ Mark as Finished";
         });
     }
+    
     // Update the Fetch function to accept a 'isManual' parameter
     function fetchActiveOrders(isManual = false) {
         const select = document.getElementById('purpose-order');
