@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Warehouse Pro v4.3</title>
+    <title>Warehouse Pro v4.3.1</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -398,8 +398,8 @@
         const payload = {
             type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName, action: currentAction, quantity: qty,
             staffName: localStorage.getItem("warehouse_staff_name"), purpose: document.getElementById('manual-purpose').value,
-            orderCode: (currentAction==='OUT') ? document.getElementById('purpose-order').value : "",
-            poValue: (currentAction==='IN') ? document.getElementById('po-number-input').value : "N/A",
+            orderCode: (currentAction==='OUT') ? (document.getElementById('removal-reason').value === "For Making an Order" ? document.getElementById('purpose-order').value : document.getElementById('removal-reason').value) : "",
+            poValue: (currentAction==='IN') ? (document.getElementById('check-has-po').checked ? document.getElementById('po-number-input').value : "Temp") : "N/A",
             stockingOrderId: (currentAction==='IN') ? tid : scannedBatchId
         };
         fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) }).then(()=> { 
@@ -444,8 +444,26 @@
 
     function downloadQR(e) { e.preventDefault(); const l=document.createElement('a'); l.href=document.getElementById('final-combined-image').src; l.download="Label.png"; l.click(); }
     function showTaskAction(a) { document.getElementById('task-menu').style.display=a==='menu'?'block':'none'; document.getElementById('add-task-section').style.display=a==='add'?'block':'none'; document.getElementById('update-task-section').style.display=a==='update'?'block':'none'; }
-    function setActionMode(m) { currentAction=m; document.getElementById('action-selector').style.display='none'; document.getElementById('movement-form').style.display='block'; document.getElementById('po-link-section').style.display=m==='IN'?'block':'none'; document.getElementById('order-link-section').style.display=m==='OUT'?'block':'none'; if(m==='OUT') fetchActiveOrders(false); }
-    function handleReasonChange() { const r=document.getElementById('removal-reason').value; document.getElementById('order-code-input-block').style.display=r==='For Making an Order'?'block':'none'; isOrderValid=r!=='For Making an Order'; }
+    
+    // FIX: SYNC VALIDATION FLAG IMMEDIATELY ON 'OUT' ACTION
+    function setActionMode(m) { 
+        currentAction=m; 
+        document.getElementById('action-selector').style.display='none'; 
+        document.getElementById('movement-form').style.display='block'; 
+        document.getElementById('po-link-section').style.display=m==='IN'?'block':'none'; 
+        document.getElementById('order-link-section').style.display=m==='OUT'?'block':'none'; 
+        if(m==='OUT') {
+            fetchActiveOrders(false);
+            handleReasonChange(); // This will auto-set isOrderValid to true if Testing is selected
+        }
+    }
+
+    function handleReasonChange() { 
+        const r=document.getElementById('removal-reason').value; 
+        document.getElementById('order-code-input-block').style.display=r==='For Making an Order'?'block':'none'; 
+        isOrderValid=r!=='For Making an Order'; 
+    }
+
     function checkOrderSelection() { isOrderValid=document.getElementById('purpose-order').value!==""; }
     function toggleScenario() { document.getElementById('contract-logic-block').style.display=document.getElementById('addition-scenario').value==='contract'?'block':'none'; }
     function togglePOInput() { document.getElementById('po-input-block').style.display=document.getElementById('check-has-po').checked?'block':'none'; }
