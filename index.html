@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Warehouse Pro v4.2</title>
+    <title>Warehouse Pro v4.3</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -21,7 +21,6 @@
         .btn-toggle { background: #6c757d; }
         .btn-purple { background: var(--purple); }
         .btn-cancel { background: #666; }
-        .btn-download { background: #17a2b8; margin-top: 10px; }
         .btn-group-inline { display: flex; gap: 10px; width: 95%; max-width: 400px; margin: 10px auto; }
         .btn-group-inline button { flex: 1; margin: 0; width: auto; font-size: 0.75rem; padding: 10px 5px; }
         .checkbox-container { display: flex; align-items: center; justify-content: flex-start; gap: 10px; margin: 10px auto; padding: 12px; border-radius: 8px; width: 95%; max-width: 400px; box-sizing: border-box; border: 1px solid #ddd; }
@@ -33,7 +32,7 @@
             #qr-modal, #qr-modal * { visibility: visible !important; display: flex !important; }
             #qr-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white !important; }
             #final-combined-image { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); height: 26mm !important; width: auto !important; }
-            #modal-btns, #manual-save-tip, h3, #label-text { display: none !important; }
+            #modal-btns, h3, #label-text { display: none !important; }
         }
     </style>
 </head>
@@ -115,7 +114,7 @@
                         <option value="For Making an Order">For Making an Order</option>
                     </select>
                     <div id="order-code-input-block" style="display:none;">
-                        <button type="button" class="btn-purple" onclick="fetchActiveOrders(true)">📋 Fetch Orders</button>
+                        <button type="button" class="btn-purple" id="fetch-active-orders-btn" onclick="fetchActiveOrders(true)">📋 Fetch Orders</button>
                         <select id="purpose-order" onchange="checkOrderSelection()"><option value="">Select Order...</option></select>
                         <div class="checkbox-container"><input type="checkbox" id="wasted-check"><label for="wasted-check">Wasted?</label></div>
                     </div>
@@ -148,3 +147,313 @@
             <div style="margin-bottom: 10px;">
                 <button type="button" class="btn-purple" id="fetch-order-list-btn" onclick="fetchOrdersForUpdate()">📋 Fetch Unfinished List</button>
                 <select id="unfinished-order-list" style="display:none; margin-top:10px;" onchange="findOrderForEdit(this.value)">
+                    <option value="" disabled selected>Select an order...</option>
+                </select>
+            </div>
+            <div id="order-edit-controls" style="display:none; margin-top:15px; background:#f9f9f9; padding:15px; border-radius:8px; text-align: left; border: 1px solid #ddd;">
+                <p><strong>Order ID:</strong> <span id="edit-id-display" style="color:var(--purple); font-weight:bold;"></span></p>
+                <p><strong>Customer:</strong> <span id="edit-cust" style="color:#666;"></span></p>
+                <label>Product Model:</label><input type="text" id="edit-prod-input">
+                <label>Details:</label><textarea id="edit-details-input" style="height: 80px;"></textarea>
+                <label>PO Number:</label><input type="text" id="edit-po-input">
+                <label>Deadline:</label><input type="date" id="edit-deadline-input">
+                <label>Status:</label>
+                <select id="edit-status-select">
+                    <option value="Unfinished">Unfinished</option>
+                    <option value="Finished">Finished</option>
+                </select>
+                <button type="button" class="btn-unlock" id="save-order-btn" onclick="toggleOrderStatus()">💾 Save All Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="task-page" style="display:none;">
+        <button class="btn-toggle" onclick="showPage('menu')">⬅ Back</button>
+        <div id="task-menu">
+            <button class="btn-add" onclick="showTaskAction('add')">➕ Add Task</button>
+            <button class="btn-purple" onclick="showTaskAction('update')">🔄 Update Task</button>
+        </div>
+        <div id="add-task-section" class="sub-section" style="display:none;">
+            <h3>New Task</h3>
+            <input type="text" id="task-content" placeholder="Content">
+            <button type="button" class="btn-toggle" id="load-task-orders-btn" onclick="fetchOrdersForTasks()">Load Orders</button>
+            <select id="task-order-link"><option value="R&D Project">R&D Project</option></select>
+            <select id="task-pic">
+                <option value="Hieu">Hieu</option><option value="Trung">Trung</option><option value="Cuong">Cuong</option><option value="Vinh">Vinh</option>
+            </select>
+            <input type="date" id="task-deadline">
+            <button class="btn-add" id="task-submit-btn" onclick="submitNewTask()">🚀 Submit</button>
+            <button class="btn-cancel" onclick="showTaskAction('menu')">Cancel</button>
+        </div>
+        <div id="update-task-section" class="sub-section" style="display:none;">
+            <h3>Close Task</h3>
+            <button type="button" class="btn-purple" id="refresh-task-btn" onclick="fetchActiveTasks()">Refresh Tasks</button>
+            <select id="unfinished-task-list" style="margin-top:15px;"><option value="">Select task...</option></select>
+            <button class="btn-add" id="task-update-btn" onclick="submitTaskUpdate()">✅ Finish</button>
+            <button class="btn-cancel" onclick="showTaskAction('menu')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="qr-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center;">
+    <div style="background:white; padding:20px; border-radius:12px; width:85%; max-width:350px; text-align:center;">
+        <div id="label-capture-area" style="background:white; padding:10px;">
+            <div id="qrcode-canvas"></div>
+            <p id="label-text" style="font-size:1rem; font-weight:bold; color:black; margin-top:10px;"></p>
+        </div>
+        <img id="final-combined-image" style="display:none; width:100%; height:auto; margin-bottom:15px; border:1px solid #eee;">
+        <div id="modal-btns">
+            <button type="button" class="btn-unlock" onclick="window.print()">🖨️ Print</button>
+            <button type="button" class="btn-download" onclick="downloadQR(event)">💾 Download</button>
+            <button type="button" class="btn-cancel" onclick="resetPage()">Done</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const MY_M_K = "100110"; 
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEtdCthyH_epfl947GqhDVcrftFYEQyXv11yqlRMRezgcGJsMdkOWOLkKY4a1mkmpi7Q/exec";
+
+    let currentPartId="", currentPartName="", currentAction="", html5QrCode, scannedBatchId="";
+    let isOrderValid=false, currentStockValue=0, generatedInId = "", currentEditOrderCode = "";
+
+    window.onload = () => { 
+        if(localStorage.getItem("warehouse_authenticated") === "true"){ 
+            document.getElementById('login-overlay').style.display = 'none'; 
+            document.getElementById('main-app').style.display = 'block'; 
+            fetchActiveOrders(false); 
+        } 
+    };
+
+    function checkPin() {
+        const staff = document.getElementById('staff-name').value;
+        const pin = document.getElementById('pin-input').value;
+        if (!staff) { alert("Please select your name."); return; }
+        if (pin === MY_M_K) { 
+            localStorage.setItem("warehouse_authenticated", "true"); 
+            localStorage.setItem("warehouse_staff_name", staff); 
+            location.reload(); 
+        } else alert("Denied"); 
+    }
+
+    function logout() { localStorage.clear(); location.reload(); }
+
+    function showPage(page) {
+        document.getElementById('dashboard-menu').style.display = 'none'; 
+        document.getElementById('stock-page').style.display = 'none'; 
+        document.getElementById('order-page').style.display = 'none';
+        document.getElementById('task-page').style.display = 'none';
+        if(html5QrCode && html5QrCode.isScanning && page !== 'stock') html5QrCode.stop();
+        if(page === 'menu') document.getElementById('dashboard-menu').style.display = 'block';
+        if(page === 'stock') { document.getElementById('stock-page').style.display = 'block'; startScanner(); }
+        if(page === 'order') document.getElementById('order-page').style.display = 'block';
+        if(page === 'task') { document.getElementById('task-page').style.display = 'block'; showTaskAction('menu'); }
+    }
+
+    function resetPage() {
+        document.getElementById('qr-modal').style.display = 'none';
+        document.getElementById('controls').style.display = 'none';
+        document.getElementById('movement-form').style.display = 'none';
+        document.getElementById('action-selector').style.display = 'block';
+        document.getElementById('scanner-view').style.display = 'block';
+        const submitBtn = document.getElementById('final-submit-btn');
+        submitBtn.disabled = false; submitBtn.innerText = "Confirm Transaction";
+        currentPartId = ""; scannedBatchId = ""; isOrderValid = false; 
+        if(document.getElementById('stock-page').style.display === 'block') startScanner();
+    }
+
+    function onScanSuccess(code) {
+        const proceed = () => {
+            document.getElementById('scanner-view').style.display = 'none';
+            document.getElementById('controls').style.display = 'block';
+            document.getElementById('item-name').innerText = "⏳ Loading Part Data...";
+            document.getElementById('stock-display').innerText = "---";
+            const isBatch = code.includes('_');
+            currentPartId = isBatch ? code.split('_')[0] : code;
+            scannedBatchId = isBatch ? code : "";
+            fetch(`${GOOGLE_SCRIPT_URL}?mode=${isBatch?"batch_info":"stock"}&id=${code}`)
+                .then(res=>res.json())
+                .then(data=>{
+                    if(data.found){
+                        currentPartName=data.name; currentStockValue=Number(data.stock);
+                        document.getElementById('item-name').innerText="✅ "+data.name;
+                        document.getElementById('stock-display').innerText=(isBatch ? "Batch: " : "Total: ") + data.stock;
+                        document.getElementById('item-id').innerText=code;
+                    } else { alert("Not Found"); resetPage(); }
+                }).catch(() => { alert("Lookup Error"); resetPage(); });
+        };
+        if(html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(proceed).catch(proceed); else proceed();
+    }
+
+    function fetchOrdersForUpdate() {
+        const btn = document.getElementById('fetch-order-list-btn');
+        const select = document.getElementById('unfinished-order-list');
+        btn.disabled = true; btn.innerText = "⏳ Fetching List...";
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`)
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false; btn.innerText = "📋 Fetch Unfinished List";
+                select.style.display = "block";
+                select.innerHTML = '<option value="" disabled selected>Select an order...</option>';
+                if (data.orders && data.orders.length > 0) {
+                    data.orders.forEach(o => { select.innerHTML += `<option value="${o.code}">${o.code} - ${o.customer}</option>`; });
+                } else alert("No unfinished orders.");
+            });
+    }
+
+    function findOrderForEdit(id) {
+        if(!id) return;
+        const controls = document.getElementById('order-edit-controls');
+        controls.style.display = 'block';
+        document.getElementById('edit-id-display').innerText = "⏳ Loading " + id;
+        document.getElementById('edit-cust').innerText = "Fetching details...";
+        document.getElementById('edit-prod-input').value = "";
+        document.getElementById('edit-details-input').value = "";
+        document.getElementById('save-order-btn').disabled = true;
+
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.found) {
+                    currentEditOrderCode = id;
+                    document.getElementById('edit-id-display').innerText = id;
+                    document.getElementById('edit-cust').innerText = data.customer;
+                    document.getElementById('edit-prod-input').value = data.product;
+                    document.getElementById('edit-details-input').value = data.details || "";
+                    document.getElementById('edit-po-input').value = data.poNumber || "";
+                    document.getElementById('edit-status-select').value = data.status;
+                    if(data.deadline) {
+                        const d = new Date(data.deadline);
+                        document.getElementById('edit-deadline-input').value = d.toISOString().split('T')[0];
+                    }
+                    document.getElementById('save-order-btn').disabled = false;
+                    document.getElementById('save-order-btn').innerText = "💾 Save All Changes";
+                }
+            });
+    }
+
+    function toggleOrderStatus() {
+        const btn = document.getElementById('save-order-btn');
+        btn.disabled = true; btn.innerText = "⏳ Saving...";
+        const payload = {
+            type: "UPDATE_ORDER_STATUS",
+            orderCode: currentEditOrderCode,
+            product: document.getElementById('edit-prod-input').value,
+            details: document.getElementById('edit-details-input').value,
+            poNumber: document.getElementById('edit-po-input').value,
+            deadline: document.getElementById('edit-deadline-input').value,
+            status: document.getElementById('edit-status-select').value
+        };
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) })
+            .then(() => { alert("✅ Order Updated!"); location.reload(); });
+    }
+
+    function startScanner() {
+        if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+        if (html5QrCode.isScanning) return;
+        html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: (w, h) => ({ width: w * 0.8, height: h * 0.4 }) }, onScanSuccess);
+    }
+
+    function fetchActiveTasks() {
+        const btn = document.getElementById('refresh-task-btn');
+        btn.disabled = true; btn.innerText = "⏳ Loading...";
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_tasks`).then(r=>r.json()).then(d=>{
+            btn.disabled = false; btn.innerText = "Refresh Tasks";
+            const s=document.getElementById('unfinished-task-list');
+            s.innerHTML='<option value="">Select task...</option>';
+            if(d.tasks) d.tasks.forEach(t=>{ s.innerHTML+=`<option value="${t.rowIndex}">${t.pic}: ${t.content}</option>`; });
+        });
+    }
+
+    function fetchActiveOrders(isManual) {
+        const btn = isManual ? document.getElementById('fetch-active-orders-btn') : null;
+        if(btn) { btn.disabled = true; btn.innerText = "⏳ Fetching..."; }
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`).then(r=>r.json()).then(d=>{
+            if(btn) { btn.disabled = false; btn.innerText = "📋 Fetch Orders"; }
+            const s=document.getElementById('purpose-order');
+            s.innerHTML='<option value="">Select Order...</option>';
+            if(d.orders) d.orders.forEach(o=>{ s.innerHTML+=`<option value="${o.code}">${o.code} - ${o.customer}</option>`; });
+            if(isManual) alert("Orders Ready!");
+        });
+    }
+
+    function fetchOrdersForTasks() {
+        const btn = document.getElementById('load-task-orders-btn');
+        btn.disabled = true; btn.innerText = "⏳ Loading...";
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`).then(r=>r.json()).then(d=>{
+            btn.disabled = false; btn.innerText = "Load Orders";
+            const s=document.getElementById('task-order-link');
+            s.innerHTML='<option value="R&D Project">R&D Project</option>';
+            if(d.orders) d.orders.forEach(o=>{ s.innerHTML+=`<option value="${o.code}">${o.code}</option>`; });
+        });
+    }
+
+    function submitFinalData() {
+        const qty = Number(document.getElementById('qty').value);
+        if(currentAction==='OUT' && (!isOrderValid || qty > currentStockValue)) { alert("Check Stock/Order!"); return; }
+        const btn = document.getElementById('final-submit-btn');
+        btn.disabled = true; btn.innerText = "⏳ Saving...";
+        const tid = (currentAction === 'IN') ? updateCodePreview() : "";
+        generatedInId = tid;
+        const payload = {
+            type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName, action: currentAction, quantity: qty,
+            staffName: localStorage.getItem("warehouse_staff_name"), purpose: document.getElementById('manual-purpose').value,
+            orderCode: (currentAction==='OUT') ? document.getElementById('purpose-order').value : "",
+            poValue: (currentAction==='IN') ? document.getElementById('po-number-input').value : "N/A",
+            stockingOrderId: (currentAction==='IN') ? tid : scannedBatchId
+        };
+        fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) }).then(()=> { 
+            if (currentAction === 'IN' && tid !== "N/A") generateLabel(tid, currentPartName); else { alert("Saved!"); resetPage(); }
+        });
+    }
+
+    function submitNewOrder() {
+        const btn = document.getElementById('order-submit-btn');
+        btn.disabled = true; btn.innerText = "⏳ Creating...";
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ type: "NEW_ORDER", customer: document.getElementById('cust-name').value, product: document.getElementById('order-prod').value, details: document.getElementById('order-details').value, deadline: document.getElementById('order-deadline').value, poNumber: document.getElementById('order-po').value })
+        }).then(() => location.reload());
+    }
+
+    function submitNewTask() {
+        const btn = document.getElementById('task-submit-btn');
+        btn.disabled = true; btn.innerText = "⏳ Saving...";
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({ type: "NEW_TASK", content: document.getElementById('task-content').value, deadline: document.getElementById('task-deadline').value, pic: document.getElementById('task-pic').value, orderCode: document.getElementById('task-order-link').value })
+        }).then(() => location.reload());
+    }
+
+    function submitTaskUpdate() {
+        const btn = document.getElementById('task-update-btn');
+        btn.disabled = true; btn.innerText = "⏳ Updating...";
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ type: "UPDATE_TASK_STATUS", rowIndex: document.getElementById('unfinished-task-list').value })
+        }).then(() => location.reload());
+    }
+
+    function generateLabel(i, n) { 
+        const m=document.getElementById('qr-modal'); m.style.display='flex'; 
+        document.getElementById('qrcode-canvas').innerHTML=""; 
+        new QRCode(document.getElementById('qrcode-canvas'),{text:i,width:300,height:300}); 
+        document.getElementById('label-text').innerText=n+"\n"+i; 
+        setTimeout(()=>{ html2canvas(document.getElementById('label-capture-area'),{scale:2}).then(c=>{ 
+            const rot=document.createElement('canvas'); rot.width=c.height; rot.height=c.width; 
+            const ctx=rot.getContext('2d'); ctx.translate(0,c.width); ctx.rotate(-Math.PI/2); ctx.drawImage(c,0,0); 
+            document.getElementById('final-combined-image').src=rot.toDataURL(); 
+            document.getElementById('final-combined-image').style.display='block'; 
+            document.getElementById('label-capture-area').style.display='none'; 
+        }); },600); 
+    }
+
+    function downloadQR(e) { e.preventDefault(); const l=document.createElement('a'); l.href=document.getElementById('final-combined-image').src; l.download="Label.png"; l.click(); }
+    function showTaskAction(a) { document.getElementById('task-menu').style.display=a==='menu'?'block':'none'; document.getElementById('add-task-section').style.display=a==='add'?'block':'none'; document.getElementById('update-task-section').style.display=a==='update'?'block':'none'; }
+    function setActionMode(m) { currentAction=m; document.getElementById('action-selector').style.display='none'; document.getElementById('movement-form').style.display='block'; document.getElementById('po-link-section').style.display=m==='IN'?'block':'none'; document.getElementById('order-link-section').style.display=m==='OUT'?'block':'none'; if(m==='OUT') fetchActiveOrders(false); }
+    function handleReasonChange() { const r=document.getElementById('removal-reason').value; document.getElementById('order-code-input-block').style.display=r==='For Making an Order'?'block':'none'; isOrderValid=r!=='For Making an Order'; }
+    function checkOrderSelection() { isOrderValid=document.getElementById('purpose-order').value!==""; }
+    function toggleScenario() { document.getElementById('contract-logic-block').style.display=document.getElementById('addition-scenario').value==='contract'?'block':'none'; }
+    function togglePOInput() { document.getElementById('po-input-block').style.display=document.getElementById('check-has-po').checked?'block':'none'; }
+    function toggleBatchSection() { document.getElementById('batch-number-input').style.display=document.getElementById('check-batches').checked?'block':'none'; }
+    function updateCodePreview() { const po=document.getElementById('po-number-input').value||"Temp"; const b=document.getElementById('batch-number-input').value; const c=`${currentPartId}_${po}_B${b}`; document.getElementById('code-preview').innerText="ID: "+c; return c; }
+    function handleManualSubmit() { onScanSuccess(document.getElementById('manual-code-input').value); }
+    function showManual() { document.getElementById('scanner-view').style.display='none'; document.getElementById('manual-entry-section').style.display='block'; }
+    function showScanner() { document.getElementById('manual-entry-section').style.display='none'; document.getElementById('scanner-view').style.display='block'; startScanner(); }
+</script>
+</body>
+</html>
