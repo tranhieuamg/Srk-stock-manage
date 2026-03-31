@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Warehouse Pro v4.3.1</title>
+    <title>Warehouse Pro v4.3.2</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -110,6 +110,7 @@
                 <div id="order-link-section" style="display:none;">
                     <label>Reason:</label>
                     <select id="removal-reason" onchange="handleReasonChange()">
+                        <option value="" disabled selected>Select reason...</option>
                         <option value="For Testing">For Testing</option>
                         <option value="For Making an Order">For Making an Order</option>
                     </select>
@@ -390,7 +391,7 @@
 
     function submitFinalData() {
         const qty = Number(document.getElementById('qty').value);
-        if(currentAction==='OUT' && (!isOrderValid || qty > currentStockValue)) { alert("Check Stock/Order!"); return; }
+        if(currentAction==='OUT' && (!isOrderValid || qty > currentStockValue)) { alert("Check Stock/Order/Reason!"); return; }
         const btn = document.getElementById('final-submit-btn');
         btn.disabled = true; btn.innerText = "⏳ Saving...";
         const tid = (currentAction === 'IN') ? updateCodePreview() : "";
@@ -444,26 +445,17 @@
 
     function downloadQR(e) { e.preventDefault(); const l=document.createElement('a'); l.href=document.getElementById('final-combined-image').src; l.download="Label.png"; l.click(); }
     function showTaskAction(a) { document.getElementById('task-menu').style.display=a==='menu'?'block':'none'; document.getElementById('add-task-section').style.display=a==='add'?'block':'none'; document.getElementById('update-task-section').style.display=a==='update'?'block':'none'; }
+    function setActionMode(m) { currentAction=m; document.getElementById('action-selector').style.display='none'; document.getElementById('movement-form').style.display='block'; document.getElementById('po-link-section').style.display=m==='IN'?'block':'none'; document.getElementById('order-link-section').style.display=m==='OUT'?'block':'none'; if(m==='OUT') fetchActiveOrders(false); }
     
-    // FIX: SYNC VALIDATION FLAG IMMEDIATELY ON 'OUT' ACTION
-    function setActionMode(m) { 
-        currentAction=m; 
-        document.getElementById('action-selector').style.display='none'; 
-        document.getElementById('movement-form').style.display='block'; 
-        document.getElementById('po-link-section').style.display=m==='IN'?'block':'none'; 
-        document.getElementById('order-link-section').style.display=m==='OUT'?'block':'none'; 
-        if(m==='OUT') {
-            fetchActiveOrders(false);
-            handleReasonChange(); // This will auto-set isOrderValid to true if Testing is selected
-        }
-    }
-
+    // CHANGE 2: Updated handleReasonChange to strictly validate selection
     function handleReasonChange() { 
         const r=document.getElementById('removal-reason').value; 
         document.getElementById('order-code-input-block').style.display=r==='For Making an Order'?'block':'none'; 
-        isOrderValid=r!=='For Making an Order'; 
+        // Only set to true if 'For Testing' is explicitly selected.
+        // If 'For Making an Order' is selected, it remains false until an order is picked.
+        isOrderValid = (r === "For Testing"); 
     }
-
+    
     function checkOrderSelection() { isOrderValid=document.getElementById('purpose-order').value!==""; }
     function toggleScenario() { document.getElementById('contract-logic-block').style.display=document.getElementById('addition-scenario').value==='contract'?'block':'none'; }
     function togglePOInput() { document.getElementById('po-input-block').style.display=document.getElementById('check-has-po').checked?'block':'none'; }
