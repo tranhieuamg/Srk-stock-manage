@@ -307,52 +307,61 @@
 
     // FIX: PROPER DATA MAPPING TO INPUT VALUES
     function findOrderForEdit(id) {
-        if(!id) return;
-        const controls = document.getElementById('order-edit-controls');
-        controls.style.display = 'block';
-        
-        // Immediate UI feedback and reset
-        document.getElementById('edit-id-display').innerText = "⏳ Loading " + id;
-        document.getElementById('edit-cust').innerText = "Fetching details...";
-        document.getElementById('edit-prod-input').value = "";
-        document.getElementById('edit-details-input').value = "";
-        document.getElementById('edit-po-input').value = "";
-        document.getElementById('edit-deadline-input').value = "";
-        document.getElementById('save-order-btn').disabled = true;
-
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.found) {
-                    currentEditOrderCode = id;
-                    document.getElementById('edit-id-display').innerText = id;
-                    document.getElementById('edit-cust').innerText = data.customer;
+            if(!id) return;
+            const controls = document.getElementById('order-edit-controls');
+            controls.style.display = 'block';
+            
+            // Immediate UI reset to clear "Ghost Data"
+            document.getElementById('edit-id-display').innerText = "⏳ Loading " + id;
+            document.getElementById('edit-cust').innerText = "Fetching details...";
+            document.getElementById('edit-prod-input').value = "";
+            document.getElementById('edit-details-input').value = "";
+            document.getElementById('edit-po-input').value = "";
+            document.getElementById('edit-deadline-input').value = "";
+            document.getElementById('save-order-btn').disabled = true;
+    
+            fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
+                .then(res => res.json())
+                .then(data => {
+                    console.log("Order Data Received:", data); // Debugging line
                     
-                    // ASSIGNING DATA TO .value ENSURES DISPLAY IN INPUTS
-                    document.getElementById('edit-prod-input').value = data.product || "";
-                    document.getElementById('edit-details-input').value = data.details || "";
-                    document.getElementById('edit-po-input').value = data.poNumber || "";
-                    document.getElementById('edit-status-select').value = data.status || "Unfinished";
-                    
-                    // FORMATTING DATE FOR HTML INPUT (YYYY-MM-DD)
-                    if(data.deadline) {
-                        const d = new Date(data.deadline);
-                        const year = d.getFullYear();
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        document.getElementById('edit-deadline-input').value = `${year}-${month}-${day}`;
+                    if (data.found) {
+                        currentEditOrderCode = id;
+                        document.getElementById('edit-id-display').innerText = id;
+                        document.getElementById('edit-cust').innerText = data.customer;
+                        
+                        // Standardizing assignment to .value
+                        document.getElementById('edit-prod-input').value = data.product || "";
+                        document.getElementById('edit-details-input').value = data.details || "";
+                        document.getElementById('edit-po-input').value = data.poNumber || "";
+                        document.getElementById('edit-status-select').value = data.status || "Unfinished";
+                        
+                        // Formatting Date for HTML Input (Required format: YYYY-MM-DD)
+                        if(data.deadline) {
+                            const d = new Date(data.deadline);
+                            if (!isNaN(d.getTime())) {
+                                const year = d.getFullYear();
+                                const month = String(d.getMonth() + 1).padStart(2, '0');
+                                const day = String(d.getDate()).padStart(2, '0');
+                                document.getElementById('edit-deadline-input').value = `${year}-${month}-${day}`;
+                            }
+                        }
+    
+                        document.getElementById('save-order-btn').disabled = false;
+                        document.getElementById('save-order-btn').innerText = "💾 Save All Changes";
+                        
+                        // Scroll into view so staff sees the loaded data
+                        controls.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                        alert("Order ID " + id + " not found in database.");
+                        controls.style.display = 'none';
                     }
-
-                    document.getElementById('save-order-btn').disabled = false;
-                    document.getElementById('save-order-btn').innerText = "💾 Save All Changes";
-                } else {
-                    alert("Order data not found.");
-                }
-            }).catch(err => {
-                alert("Error fetching order details.");
-                console.error(err);
-            });
-    }
+                })
+                .catch(err => {
+                    console.error("Fetch error:", err);
+                    alert("Connection error. Check your Script URL and Deployment.");
+                });
+        }
 
     function toggleOrderStatus() {
         const btn = document.getElementById('save-order-btn');
