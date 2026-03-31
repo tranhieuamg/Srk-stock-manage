@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Warehouse Pro v4.3.2</title>
+    <title>Warehouse Pro v4.3.3</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -21,9 +21,15 @@
         .btn-toggle { background: #6c757d; }
         .btn-purple { background: var(--purple); }
         .btn-cancel { background: #666; }
+        .btn-download { background: #17a2b8; margin-top: 10px; }
         .btn-group-inline { display: flex; gap: 10px; width: 95%; max-width: 400px; margin: 10px auto; }
         .btn-group-inline button { flex: 1; margin: 0; width: auto; font-size: 0.75rem; padding: 10px 5px; }
-        .checkbox-container { display: flex; align-items: center; justify-content: flex-start; gap: 10px; margin: 10px auto; padding: 12px; border-radius: 8px; width: 95%; max-width: 400px; box-sizing: border-box; border: 1px solid #ddd; }
+        
+        /* FIX: Corrected Checkbox Alignment to the Left */
+        .checkbox-container { display: flex; align-items: center; justify-content: flex-start; gap: 12px; margin: 10px auto; padding: 12px; border-radius: 8px; width: 95%; max-width: 400px; box-sizing: border-box; border: 1px solid #ddd; text-align: left; }
+        .checkbox-container input { width: 20px; height: 20px; margin: 0; cursor: pointer; flex-shrink: 0; }
+        .checkbox-container label { margin: 0; font-size: 0.9rem; cursor: pointer; flex-grow: 1; text-align: left; }
+        
         #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 8px; overflow: hidden; background: #000; }
         #final-combined-image { display: block; margin: 20px auto; height: 26mm; width: auto; border: 1px solid #eee; }
         
@@ -394,8 +400,12 @@
         if(currentAction==='OUT' && (!isOrderValid || qty > currentStockValue)) { alert("Check Stock/Order/Reason!"); return; }
         const btn = document.getElementById('final-submit-btn');
         btn.disabled = true; btn.innerText = "⏳ Saving...";
-        const tid = (currentAction === 'IN') ? updateCodePreview() : "";
+        
+        // FIX: QR Logic - Only create unique ID if it is Contract/PO Tracked
+        const scenario = document.getElementById('addition-scenario').value;
+        const tid = (currentAction === 'IN' && scenario === 'contract') ? updateCodePreview() : "";
         generatedInId = tid;
+
         const payload = {
             type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName, action: currentAction, quantity: qty,
             staffName: localStorage.getItem("warehouse_staff_name"), purpose: document.getElementById('manual-purpose').value,
@@ -403,8 +413,14 @@
             poValue: (currentAction==='IN') ? (document.getElementById('check-has-po').checked ? document.getElementById('po-number-input').value : "Temp") : "N/A",
             stockingOrderId: (currentAction==='IN') ? tid : scannedBatchId
         };
+
         fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) }).then(()=> { 
-            if (currentAction === 'IN' && tid !== "N/A") generateLabel(tid, currentPartName); else { alert("Saved!"); resetPage(); }
+            // FIX: Only generate unique Lot QR for Contract scenario. General Pool resets immediately.
+            if (currentAction === 'IN' && scenario === 'contract' && tid !== "") { 
+                generateLabel(tid, currentPartName); 
+            } else { 
+                alert("Saved!"); resetPage(); 
+            }
         });
     }
 
@@ -447,12 +463,9 @@
     function showTaskAction(a) { document.getElementById('task-menu').style.display=a==='menu'?'block':'none'; document.getElementById('add-task-section').style.display=a==='add'?'block':'none'; document.getElementById('update-task-section').style.display=a==='update'?'block':'none'; }
     function setActionMode(m) { currentAction=m; document.getElementById('action-selector').style.display='none'; document.getElementById('movement-form').style.display='block'; document.getElementById('po-link-section').style.display=m==='IN'?'block':'none'; document.getElementById('order-link-section').style.display=m==='OUT'?'block':'none'; if(m==='OUT') fetchActiveOrders(false); }
     
-    // CHANGE 2: Updated handleReasonChange to strictly validate selection
     function handleReasonChange() { 
         const r=document.getElementById('removal-reason').value; 
         document.getElementById('order-code-input-block').style.display=r==='For Making an Order'?'block':'none'; 
-        // Only set to true if 'For Testing' is explicitly selected.
-        // If 'For Making an Order' is selected, it remains false until an order is picked.
         isOrderValid = (r === "For Testing"); 
     }
     
@@ -460,7 +473,18 @@
     function toggleScenario() { document.getElementById('contract-logic-block').style.display=document.getElementById('addition-scenario').value==='contract'?'block':'none'; }
     function togglePOInput() { document.getElementById('po-input-block').style.display=document.getElementById('check-has-po').checked?'block':'none'; }
     function toggleBatchSection() { document.getElementById('batch-number-input').style.display=document.getElementById('check-batches').checked?'block':'none'; }
-    function updateCodePreview() { const po=document.getElementById('po-number-input').value||"Temp"; const b=document.getElementById('batch-number-input').value; const c=`${currentPartId}_${po}_B${b}`; document.getElementById('code-preview').innerText="ID: "+c; return c; }
+    
+    // FIX: Optimized Preview logic
+    function updateCodePreview() { 
+        const scenario = document.getElementById('addition-scenario').value;
+        if(scenario === 'general') return "";
+        const po=document.getElementById('po-number-input').value||"Temp"; 
+        const b=document.getElementById('batch-number-input').value; 
+        const c=`${currentPartId}_${po}_B${b}`; 
+        document.getElementById('code-preview').innerText="Lot ID: "+c; 
+        return c; 
+    }
+
     function handleManualSubmit() { onScanSuccess(document.getElementById('manual-code-input').value); }
     function showManual() { document.getElementById('scanner-view').style.display='none'; document.getElementById('manual-entry-section').style.display='block'; }
     function showScanner() { document.getElementById('manual-entry-section').style.display='none'; document.getElementById('scanner-view').style.display='block'; startScanner(); }
