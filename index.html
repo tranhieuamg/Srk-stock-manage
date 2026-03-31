@@ -260,28 +260,25 @@
     let isOrderValid=false, currentStockValue=0, generatedInId = "";
     let currentEditOrderCode = "", currentEditStatus = "";
 
-    // Update onload to pass 'false' (Silent mode)
     window.onload = () => { 
         if(localStorage.getItem("warehouse_authenticated") === "true"){ 
             document.getElementById('login-overlay').style.display = 'none'; 
             document.getElementById('main-app').style.display = 'block'; 
-            fetchActiveOrders(false); // <--- Added 'false' here
+            fetchActiveOrders(false); 
         } 
     };
+
     function checkPin() { if (document.getElementById('pin-input').value === MY_M_K) { localStorage.setItem("warehouse_authenticated", "true"); localStorage.setItem("warehouse_staff_name", document.getElementById('staff-name').value); location.reload(); } else alert("Denied"); }
     function logout() { localStorage.clear(); location.reload(); }
 
     function showPage(page) {
-        // 1. Hide every top-level section first
         document.getElementById('dashboard-menu').style.display = 'none'; 
         document.getElementById('stock-page').style.display = 'none'; 
         document.getElementById('order-page').style.display = 'none';
         document.getElementById('task-page').style.display = 'none';
         
-        // 2. Stop scanner if moving away from Stock
         if(html5QrCode && html5QrCode.isScanning && page !== 'stock') html5QrCode.stop();
-    
-        // 3. Show the requested page
+
         if(page === 'menu') {
             document.getElementById('dashboard-menu').style.display = 'block';
         } else if(page === 'stock') { 
@@ -291,12 +288,11 @@
             document.getElementById('order-page').style.display = 'block';
         } else if(page === 'task') {
             document.getElementById('task-page').style.display = 'block';
-            // FIX: Always reset the Task internal menu when entering this page
             showTaskAction('menu'); 
         }
     }
 
-    // FIX: Optimized "Next Scan" function
+    // FIX: Added Button Unlock and Validation Reset
     function resetPage() {
         document.getElementById('qr-modal').style.display = 'none';
         document.getElementById('controls').style.display = 'none';
@@ -305,8 +301,15 @@
         document.getElementById('scanner-view').style.display = 'block';
         document.getElementById('manual-entry-section').style.display = 'none';
         
-        // Clear variables
-        currentPartId = ""; scannedBatchId = "";
+        // Unlock the submit button for the next scan
+        const submitBtn = document.getElementById('final-submit-btn');
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Confirm Transaction";
+
+        // Reset variables and validation flags
+        currentPartId = ""; 
+        scannedBatchId = "";
+        isOrderValid = false; 
         
         if(document.getElementById('stock-page').style.display === 'block') {
             startScanner();
@@ -316,7 +319,6 @@
     }
 
     function showTaskAction(action) {
-        // This ensures ONLY the chosen sub-section is visible
         document.getElementById('task-menu').style.display = (action === 'menu') ? 'block' : 'none';
         document.getElementById('add-task-section').style.display = (action === 'add') ? 'block' : 'none';
         document.getElementById('update-task-section').style.display = (action === 'update') ? 'block' : 'none';
@@ -325,198 +327,82 @@
     function fetchActiveTasks() {
         const select = document.getElementById('unfinished-task-list');
         const btn = event.target;
-        
-        btn.disabled = true;
-        btn.innerText = "⏳ Loading...";
-    
+        btn.disabled = true; btn.innerText = "⏳ Loading...";
         fetch(`${GOOGLE_SCRIPT_URL}?mode=active_tasks`)
             .then(res => res.json())
             .then(data => {
-                btn.disabled = false;
-                btn.innerText = "Refresh Task List";
-                
+                btn.disabled = false; btn.innerText = "Refresh Task List";
                 select.innerHTML = '<option value="" disabled selected>Select a task to finish...</option>';
-                
                 if (data.tasks && data.tasks.length > 0) {
                     data.tasks.forEach(t => {
-                        // This creates a clean label: "PIC: Task (Order #)"
                         select.innerHTML += `<option value="${t.rowIndex}">${t.pic}: ${t.content} [${t.order}]</option>`;
                     });
-                } else {
-                    alert("No unfinished tasks found in the Spreadsheet.");
-                }
+                } else { alert("No unfinished tasks found."); }
             })
-            .catch(err => {
-                console.error("Task Fetch Error:", err);
-                btn.disabled = false;
-                btn.innerText = "Refresh Task List";
-                alert("Connection error. Is the Script URL correct?");
-            });
+            .catch(err => { btn.disabled = false; btn.innerText = "Refresh Task List"; alert("Error connecting."); });
     }
 
     function submitNewTask() {
-        // 1. Grab all the inputs
         const contentInput = document.getElementById('task-content');
         const orderInput = document.getElementById('task-order-link');
         const picInput = document.getElementById('task-pic');
         const deadlineInput = document.getElementById('task-deadline');
         const btn = document.getElementById('task-submit-btn');
-    
-        // 2. Simple Validation
-        if(!contentInput.value || !deadlineInput.value) { 
-            alert("⚠️ Please fill in both the Task Content and the Deadline."); 
-            return; 
-        }
-    
-        // 3. Visual Feedback (Prevents double-clicking)
-        btn.disabled = true;
-        btn.innerText = "⏳ Saving Task...";
-    
-        // 4. Send the data
-        const payload = {
-            type: "NEW_TASK", 
-            content: contentInput.value, 
-            orderCode: orderInput.value, 
-            pic: picInput.value, 
-            deadline: deadlineInput.value
-        };
-    
+
+        if(!contentInput.value || !deadlineInput.value) { alert("⚠️ Fill content and deadline."); return; }
+
+        btn.disabled = true; btn.innerText = "⏳ Saving...";
         fetch(GOOGLE_SCRIPT_URL, {
             method: "POST",
-            body: JSON.stringify(payload)
-        })
-        .then(res => {
-            // We don't necessarily need to parse JSON here since we just want to know it's done
-            alert("✅ Task Added Successfully!");
-            
-            // Soft reset: go back to the task menu and clear the fields
-            contentInput.value = "";
-            deadlineInput.value = "";
+            body: JSON.stringify({ type: "NEW_TASK", content: contentInput.value, orderCode: orderInput.value, pic: picInput.value, deadline: deadlineInput.value })
+        }).then(() => {
+            alert("✅ Task Added!");
+            contentInput.value = ""; deadlineInput.value = "";
             showTaskAction('menu');
-            
-            // Reset button
-            btn.disabled = false;
-            btn.innerText = "🚀 Submit Task";
-        })
-        .catch(err => {
-            console.error("Submission Error:", err);
-            alert("❌ Failed to save task. Check your internet or Google Script deployment.");
-            btn.disabled = false;
-            btn.innerText = "🚀 Submit Task";
+            btn.disabled = false; btn.innerText = "🚀 Submit Task";
         });
     }
-    
+
     function submitTaskUpdate() {
         const select = document.getElementById('unfinished-task-list');
         const rowIndex = select.value;
-    
-        if (!rowIndex) {
-            alert("Please select a task first!");
-            return;
-        }
-    
+        if (!rowIndex) { alert("Select a task!"); return; }
         const btn = document.getElementById('task-update-btn');
-        btn.disabled = true;
-        btn.innerText = "⏳ Updating Sheets...";
-    
+        btn.disabled = true; btn.innerText = "⏳ Updating...";
         fetch(GOOGLE_SCRIPT_URL, {
-            method: "POST",
-            // We send it as a 'no-cors' request to bypass strict browser redirects
-            mode: "no-cors", 
-            body: JSON.stringify({ 
-                type: "UPDATE_TASK_STATUS", 
-                rowIndex: rowIndex 
-            })
-        })
-        .then(() => {
-            // With 'no-cors', we won't get a readable response body, 
-            // but since we know the sheet updated, we treat 'then' as success.
-            alert("✅ Task successfully marked as Finished!");
-            
-            // Reset the UI
-            btn.disabled = false;
-            btn.innerText = "✅ Mark as Finished";
-            
-            // Refresh the list and go back to the menu
-            fetchActiveTasks();
-            showTaskAction('menu');
-        })
-        .catch(err => {
-            // This will now only trigger if the internet is actually down
-            console.error("Update Error:", err);
-            alert("⚠️ Connection error. Please check your signal and try again.");
-            btn.disabled = false;
-            btn.innerText = "✅ Mark as Finished";
+            method: "POST", mode: "no-cors",
+            body: JSON.stringify({ type: "UPDATE_TASK_STATUS", rowIndex: rowIndex })
+        }).then(() => {
+            alert("✅ Task Finished!");
+            btn.disabled = false; btn.innerText = "✅ Mark as Finished";
+            fetchActiveTasks(); showTaskAction('menu');
         });
     }
-    
-    // Update the Fetch function to accept a 'isManual' parameter
+
     function fetchActiveOrders(isManual = false) {
         const select = document.getElementById('purpose-order');
         const btn = isManual ? document.querySelector('.btn-purple[onclick*="fetchActiveOrders"]') : null;
-        
-        if(btn) {
-            btn.disabled = true;
-            btn.innerText = "⏳ Fetching...";
-        }
-    
+        if(btn) { btn.disabled = true; btn.innerText = "⏳ Fetching..."; }
         fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`)
             .then(res => res.json())
             .then(data => {
-                if(btn) {
-                    btn.disabled = false;
-                    btn.innerText = "📋 Refresh Orders";
-                }
-    
+                if(btn) { btn.disabled = false; btn.innerText = "📋 Refresh Orders"; }
                 select.innerHTML = '<option value="" disabled selected>Select an Active Order...</option>';
-                
                 if (data.orders && data.orders.length > 0) {
-                    data.orders.forEach(order => {
-                        select.innerHTML += `<option value="${order.code}">${order.code} - ${order.customer}</option>`;
-                    });
-                    
-                    // ONLY show the alert if the staff actually clicked the button
+                    data.orders.forEach(order => { select.innerHTML += `<option value="${order.code}">${order.code} - ${order.customer}</option>`; });
                     if(isManual) alert("✅ Orders loaded!"); 
                 } else {
-                    select.innerHTML = '<option value="" disabled selected>❌ No Unfinished Orders</option>';
+                    select.innerHTML = '<option value="" disabled selected>❌ No Orders</option>';
                     if(isManual) alert("No unfinished orders found.");
                 }
-            })
-            .catch(err => {
-                if(btn) {
-                    btn.disabled = false;
-                    btn.innerText = "📋 Fetch Active Orders";
-                }
-                if(isManual) alert("Error connecting to Sheets.");
             });
-    }
-    
-    function handleReasonChange() {
-        const reason = document.getElementById('removal-reason').value;
-        const block = document.getElementById('order-code-input-block');
-        
-        if (reason === "For Making an Order") {
-            block.style.display = 'block';
-            // We don't auto-fetch here to save data; we let the staff press the button
-            isOrderValid = false; 
-        } else {
-            block.style.display = 'none';
-            isOrderValid = true; // No order link required for testing/processing
-        }
     }
 
     function startScanner() {
         if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-        if (html5QrCode.isScanning) return; // Prevent double start
-
-        const config = { 
-            fps: 20, 
-            qrbox: (w, h) => { return { width: w * 0.8, height: h * 0.4 }; },
-            videoConstraints: { facingMode: "environment" }
-        };
-
-        html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-        .catch(err => { console.error("Scanner Error", err); });
+        if (html5QrCode.isScanning) return;
+        const config = { fps: 20, qrbox: (w, h) => { return { width: w * 0.8, height: h * 0.4 }; }, videoConstraints: { facingMode: "environment" } };
+        html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess).catch(err => { console.error("Scanner Error", err); });
     }
 
     function onScanSuccess(code) {
@@ -527,7 +413,6 @@
             currentPartId = isBatch ? code.split('_')[0] : code;
             scannedBatchId = isBatch ? code : "";
             const mode = isBatch ? "batch_info" : "stock";
-
             fetch(`${GOOGLE_SCRIPT_URL}?mode=${mode}&id=${code}`).then(res=>res.json()).then(data=>{
                 if(data.found){
                     currentPartName=data.name; currentStockValue=Number(data.stock);
@@ -546,7 +431,8 @@
         document.getElementById('movement-form').style.display='block';
         document.getElementById('po-link-section').style.display = mode==='IN' ? 'block':'none';
         document.getElementById('order-link-section').style.display = mode==='OUT' ? 'block':'none';
-        if(mode === 'OUT') fetchActiveOrders();
+        if(mode === 'OUT') { fetchActiveOrders(false); isOrderValid = false; }
+        else { isOrderValid = true; }
     }
 
     function toggleScenario() { document.getElementById('contract-logic-block').style.display = (document.getElementById('addition-scenario').value === 'contract') ? 'block' : 'none'; updateCodePreview(); }
@@ -562,11 +448,45 @@
         document.getElementById('code-preview').innerText = "Order ID: " + code; return code;
     }
 
+    function searchSharedPOs() {
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=search_shared_po`).then(res=>res.json()).then(data=>{
+            const list = document.getElementById('search-results-list'); list.style.display = "block";
+            if(data.results.length > 0) {
+                let html = "<strong>Shared POs:</strong><ul>";
+                data.results.forEach(i => { html += `<li onclick="applyPO('${i.po}')" style="color:var(--purple); cursor:pointer;">${i.po} <br><small>${i.desc}</small></li>`; });
+                list.innerHTML = html + "</ul>";
+            } else list.innerHTML = "No shared POs.";
+        });
+    }
+
+    function applyPO(po) { document.getElementById('check-has-po').checked = true; document.getElementById('po-number-input').value = po; document.getElementById('po-input-block').style.display = 'block'; updateCodePreview(); }
+    function searchBatches() {
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=batch_lookup&partId=${currentPartId}`).then(res=>res.json()).then(data=>{
+            const list = document.getElementById('search-results-list'); list.style.display = "block";
+            if(data.results.length > 0) { list.innerHTML = "<strong>Existing Batches:</strong><br>" + data.results.map(i => i.code).join("<br>"); } 
+            else list.innerHTML = "No existing batches.";
+        });
+    }
+
+    function handleReasonChange() {
+        const reason = document.getElementById('removal-reason').value;
+        const block = document.getElementById('order-code-input-block');
+        if (reason === "For Making an Order") { block.style.display = 'block'; isOrderValid = false; } 
+        else { block.style.display = 'none'; isOrderValid = true; }
+    }
+
+    function checkOrderSelection() { isOrderValid = document.getElementById('purpose-order').value !== ""; }
+
     function submitFinalData() {
         const qty = Number(document.getElementById('qty').value);
-        if(currentAction==='OUT' && qty > currentStockValue) { alert("Not enough stock!"); return; }
         
-        const btn = document.getElementById('final-submit-btn'); btn.disabled = true;
+        // Safety check for removal logic
+        if(currentAction==='OUT') {
+            if(qty > currentStockValue) { alert("Not enough stock!"); return; }
+            if(!isOrderValid) { alert("Please select an Order first!"); return; }
+        }
+
+        const btn = document.getElementById('final-submit-btn'); btn.disabled = true; btn.innerText = "⏳ Saving...";
         const targetInId = (currentAction === 'IN') ? updateCodePreview() : "";
         generatedInId = targetInId;
 
@@ -610,57 +530,14 @@
     }
 
     function submitNewOrder() {
-        // 1. Capture inputs
-        const c = document.getElementById('cust-name');
-        const p = document.getElementById('order-prod');
-        const d = document.getElementById('order-deadline');
-        const det = document.getElementById('order-details');
-        const po = document.getElementById('order-po');
-        const btn = document.getElementById('order-submit-btn');
-    
-        // 2. Validation
-        if (!c.value || !p.value || !d.value) { 
-            alert("⚠️ Please fill in Customer Name, Product, and Deadline."); 
-            return; 
-        }
-    
-        // 3. UI Feedback
-        btn.disabled = true;
-        btn.innerText = "⏳ Creating Order...";
-    
-        const payload = { 
-            type: "NEW_ORDER", 
-            customer: c.value, 
-            product: p.value, 
-            deadline: d.value, 
-            details: det.value, 
-            poNumber: po.value 
-        };
-    
-        console.log("Sending Order:", payload);
-    
-        fetch(GOOGLE_SCRIPT_URL, { 
-            method: "POST", 
-            // Using 'no-cors' is safer for Google Apps Script on mobile browsers
-            mode: "no-cors", 
-            body: JSON.stringify(payload)
-        })
-        .then(() => {
-            // Because 'no-cors' doesn't let us read the JSON response, 
-            // we assume success if the fetch completes without an error.
-            alert("✅ Order Submitted! (Note: Check spreadsheet for the generated 6-digit code)");
-            
-            // Clear fields and reload to refresh the 'Active Orders' lists
-            location.reload(); 
-        })
-        .catch(err => {
-            console.error("Fetch Error:", err);
-            alert("❌ Error: Could not connect to the server.");
-            btn.disabled = false;
-            btn.innerText = "🚀 Create Order";
-        });
+        const c = document.getElementById('cust-name'); const p = document.getElementById('order-prod'); const d = document.getElementById('order-deadline');
+        const det = document.getElementById('order-details'); const po = document.getElementById('order-po'); const btn = document.getElementById('order-submit-btn');
+        if (!c.value || !p.value || !d.value) { alert("⚠️ Missing fields."); return; }
+        btn.disabled = true; btn.innerText = "⏳ Creating...";
+        fetch(GOOGLE_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ type: "NEW_ORDER", customer: c.value, product: p.value, deadline: d.value, details: det.value, poNumber: po.value })
+        }).then(() => { alert("✅ Submitted!"); location.reload(); });
     }
-    
+
     function fetchOrdersForUpdate() {
         const select = document.getElementById('unfinished-order-list');
         fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`).then(res => res.json()).then(data => {
@@ -672,45 +549,21 @@
 
     function fetchOrdersForTasks() {
         const select = document.getElementById('task-order-link');
-        const btn = event.target; // Grabs the button you just clicked
-    
-        btn.disabled = true;
-        btn.innerText = "⏳ Loading...";
-    
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`)
-            .then(res => {
-                if (!res.ok) throw new Error("HTTP error " + res.status);
-                return res.json();
-            })
-            .then(data => {
-                btn.disabled = false;
-                btn.innerText = "Load Orders";
-    
-                // Reset with default option
-                select.innerHTML = '<option value="R&D Project">R&D Project</option>';
-    
-                if (data.orders && data.orders.length > 0) {
-                    data.orders.forEach(o => {
-                        select.innerHTML += `<option value="${o.code}">${o.code} - ${o.customer}</option>`;
-                    });
-                    alert("✅ Active Orders Loaded into the list!");
-                } else {
-                    alert("No active orders found in the system.");
-                }
-            })
-            .catch(err => {
-                console.error("Task Order Fetch Error:", err);
-                btn.disabled = false;
-                btn.innerText = "Load Orders";
-                alert("Connection error. Check your Internet or Script URL.");
-            });
+        const btn = event.target; btn.disabled = true; btn.innerText = "⏳ Loading...";
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`).then(res => res.json()).then(data => {
+            btn.disabled = false; btn.innerText = "Load Orders";
+            select.innerHTML = '<option value="R&D Project">R&D Project</option>';
+            data.orders.forEach(o => { select.innerHTML += `<option value="${o.code}">${o.code} - ${o.customer}</option>`; });
+        });
     }
 
     function findOrderForEdit(id) {
         fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`).then(res => res.json()).then(data => {
             if (data.found) {
                 currentEditOrderCode = id; currentEditStatus = data.status;
+                document.getElementById('edit-id-display').innerText = id;
                 document.getElementById('edit-cust').innerText = data.customer;
+                document.getElementById('edit-prod').innerText = data.product;
                 document.getElementById('edit-status').innerText = data.status;
                 document.getElementById('order-edit-controls').style.display = 'block';
                 document.getElementById('status-toggle-btn').innerText = data.status === "Unfinished" ? "Finish" : "Open";
@@ -727,8 +580,6 @@
     function handleManualSubmit() { onScanSuccess(document.getElementById('manual-code-input').value); }
     function showManual() { document.getElementById('scanner-view').style.display='none'; document.getElementById('manual-entry-section').style.display='block'; }
     function showScanner() { document.getElementById('manual-entry-section').style.display='none'; document.getElementById('scanner-view').style.display='block'; startScanner(); }
-
-    // Task Management functions omitted for brevity but should follow the same pattern
 </script>
 </body>
 </html>
