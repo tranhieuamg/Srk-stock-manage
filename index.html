@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Warehouse Pro v4.3.3</title>
+    <title>Warehouse Pro v4.3.4</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -25,7 +25,6 @@
         .btn-group-inline { display: flex; gap: 10px; width: 95%; max-width: 400px; margin: 10px auto; }
         .btn-group-inline button { flex: 1; margin: 0; width: auto; font-size: 0.75rem; padding: 10px 5px; }
         
-        /* FIX: Corrected Checkbox Alignment to the Left */
         .checkbox-container { display: flex; align-items: center; justify-content: flex-start; gap: 12px; margin: 10px auto; padding: 12px; border-radius: 8px; width: 95%; max-width: 400px; box-sizing: border-box; border: 1px solid #ddd; text-align: left; }
         .checkbox-container input { width: 20px; height: 20px; margin: 0; cursor: pointer; flex-shrink: 0; }
         .checkbox-container label { margin: 0; font-size: 0.9rem; cursor: pointer; flex-grow: 1; text-align: left; }
@@ -314,8 +313,12 @@
         controls.style.display = 'block';
         document.getElementById('edit-id-display').innerText = "⏳ Loading " + id;
         document.getElementById('edit-cust').innerText = "Fetching details...";
+        
+        // Immediate Clear for Ghost Data
         document.getElementById('edit-prod-input').value = "";
         document.getElementById('edit-details-input').value = "";
+        document.getElementById('edit-po-input').value = "";
+        document.getElementById('edit-deadline-input').value = "";
         document.getElementById('save-order-btn').disabled = true;
 
         fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
@@ -325,14 +328,21 @@
                     currentEditOrderCode = id;
                     document.getElementById('edit-id-display').innerText = id;
                     document.getElementById('edit-cust').innerText = data.customer;
-                    document.getElementById('edit-prod-input').value = data.product;
+                    
+                    // POPULATING EXISTING INFORMATION
+                    document.getElementById('edit-prod-input').value = data.product || "";
                     document.getElementById('edit-details-input').value = data.details || "";
                     document.getElementById('edit-po-input').value = data.poNumber || "";
-                    document.getElementById('edit-status-select').value = data.status;
+                    document.getElementById('edit-status-select').value = data.status || "Unfinished";
+                    
                     if(data.deadline) {
                         const d = new Date(data.deadline);
-                        document.getElementById('edit-deadline-input').value = d.toISOString().split('T')[0];
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        document.getElementById('edit-deadline-input').value = `${year}-${month}-${day}`;
                     }
+
                     document.getElementById('save-order-btn').disabled = false;
                     document.getElementById('save-order-btn').innerText = "💾 Save All Changes";
                 }
@@ -401,7 +411,6 @@
         const btn = document.getElementById('final-submit-btn');
         btn.disabled = true; btn.innerText = "⏳ Saving...";
         
-        // FIX: QR Logic - Only create unique ID if it is Contract/PO Tracked
         const scenario = document.getElementById('addition-scenario').value;
         const tid = (currentAction === 'IN' && scenario === 'contract') ? updateCodePreview() : "";
         generatedInId = tid;
@@ -415,7 +424,6 @@
         };
 
         fetch(GOOGLE_SCRIPT_URL, { method:"POST", body: JSON.stringify(payload) }).then(()=> { 
-            // FIX: Only generate unique Lot QR for Contract scenario. General Pool resets immediately.
             if (currentAction === 'IN' && scenario === 'contract' && tid !== "") { 
                 generateLabel(tid, currentPartName); 
             } else { 
@@ -474,7 +482,6 @@
     function togglePOInput() { document.getElementById('po-input-block').style.display=document.getElementById('check-has-po').checked?'block':'none'; }
     function toggleBatchSection() { document.getElementById('batch-number-input').style.display=document.getElementById('check-batches').checked?'block':'none'; }
     
-    // FIX: Optimized Preview logic
     function updateCodePreview() { 
         const scenario = document.getElementById('addition-scenario').value;
         if(scenario === 'general') return "";
