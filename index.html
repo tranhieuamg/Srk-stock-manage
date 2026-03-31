@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Warehouse Pro v4.3.4</title>
+    <title>Warehouse Pro v4.3.5</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -24,11 +24,9 @@
         .btn-download { background: #17a2b8; margin-top: 10px; }
         .btn-group-inline { display: flex; gap: 10px; width: 95%; max-width: 400px; margin: 10px auto; }
         .btn-group-inline button { flex: 1; margin: 0; width: auto; font-size: 0.75rem; padding: 10px 5px; }
-        
         .checkbox-container { display: flex; align-items: center; justify-content: flex-start; gap: 12px; margin: 10px auto; padding: 12px; border-radius: 8px; width: 95%; max-width: 400px; box-sizing: border-box; border: 1px solid #ddd; text-align: left; }
         .checkbox-container input { width: 20px; height: 20px; margin: 0; cursor: pointer; flex-shrink: 0; }
         .checkbox-container label { margin: 0; font-size: 0.9rem; cursor: pointer; flex-grow: 1; text-align: left; }
-        
         #reader { width: 100%; max-width: 400px; margin: 15px auto; border-radius: 8px; overflow: hidden; background: #000; }
         #final-combined-image { display: block; margin: 20px auto; height: 26mm; width: auto; border: 1px solid #eee; }
         
@@ -307,14 +305,15 @@
             });
     }
 
+    // FIX: PROPER DATA MAPPING TO INPUT VALUES
     function findOrderForEdit(id) {
         if(!id) return;
         const controls = document.getElementById('order-edit-controls');
         controls.style.display = 'block';
+        
+        // Immediate UI feedback and reset
         document.getElementById('edit-id-display').innerText = "⏳ Loading " + id;
         document.getElementById('edit-cust').innerText = "Fetching details...";
-        
-        // Immediate Clear for Ghost Data
         document.getElementById('edit-prod-input').value = "";
         document.getElementById('edit-details-input').value = "";
         document.getElementById('edit-po-input').value = "";
@@ -329,12 +328,13 @@
                     document.getElementById('edit-id-display').innerText = id;
                     document.getElementById('edit-cust').innerText = data.customer;
                     
-                    // POPULATING EXISTING INFORMATION
+                    // ASSIGNING DATA TO .value ENSURES DISPLAY IN INPUTS
                     document.getElementById('edit-prod-input').value = data.product || "";
                     document.getElementById('edit-details-input').value = data.details || "";
                     document.getElementById('edit-po-input').value = data.poNumber || "";
                     document.getElementById('edit-status-select').value = data.status || "Unfinished";
                     
+                    // FORMATTING DATE FOR HTML INPUT (YYYY-MM-DD)
                     if(data.deadline) {
                         const d = new Date(data.deadline);
                         const year = d.getFullYear();
@@ -345,7 +345,12 @@
 
                     document.getElementById('save-order-btn').disabled = false;
                     document.getElementById('save-order-btn').innerText = "💾 Save All Changes";
+                } else {
+                    alert("Order data not found.");
                 }
+            }).catch(err => {
+                alert("Error fetching order details.");
+                console.error(err);
             });
     }
 
