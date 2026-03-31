@@ -188,10 +188,27 @@
             </div>
             <div id="order-edit-controls" style="display:none; margin-top:15px; background:#f9f9f9; padding:15px; border-radius:8px; text-align: left; border: 1px solid #ddd;">
                 <p><strong>Order ID:</strong> <span id="edit-id-display" style="color:var(--purple); font-weight:bold;"></span></p>
-                <p><strong>Customer:</strong> <span id="edit-cust"></span></p>
-                <p><strong>Product:</strong> <span id="edit-prod"></span></p>
-                <p><strong>Status:</strong> <span id="edit-status" style="font-weight: bold;"></span></p>
-                <button type="button" id="status-toggle-btn" style="width:100%; margin-top:10px;" onclick="toggleOrderStatus()"></button>
+                <p><strong>Customer:</strong> <span id="edit-cust" style="color:#666;"></span></p>
+                
+                <label>Product Model:</label>
+                <input type="text" id="edit-prod-input">
+                
+                <label>Details:</label>
+                <textarea id="edit-details-input" style="height: 80px;"></textarea>
+                
+                <label>PO Number:</label>
+                <input type="text" id="edit-po-input">
+                
+                <label>Deadline:</label>
+                <input type="date" id="edit-deadline-input">
+                
+                <label>Status:</label>
+                <select id="edit-status-select">
+                    <option value="Unfinished">Unfinished</option>
+                    <option value="Finished">Finished</option>
+                </select>
+                
+                <button type="button" class="btn-unlock" id="save-order-btn" style="width:100%; margin-top:10px;" onclick="toggleOrderStatus()">💾 Save All Changes</button>
             </div>
         </div>
     </div>
@@ -558,23 +575,63 @@
     }
 
     function findOrderForEdit(id) {
-        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`).then(res => res.json()).then(data => {
+        if(!id) return;
+        fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
+        .then(res => res.json())
+        .then(data => {
             if (data.found) {
-                currentEditOrderCode = id; currentEditStatus = data.status;
+                currentEditOrderCode = id;
                 document.getElementById('edit-id-display').innerText = id;
                 document.getElementById('edit-cust').innerText = data.customer;
-                document.getElementById('edit-prod').innerText = data.product;
-                document.getElementById('edit-status').innerText = data.status;
+                
+                // Fill inputs with existing data
+                document.getElementById('edit-prod-input').value = data.product;
+                document.getElementById('edit-details-input').value = data.details || "";
+                document.getElementById('edit-po-input').value = data.poNumber || "";
+                document.getElementById('edit-status-select').value = data.status;
+                
+                // Format date for the input (YYYY-MM-DD)
+                if(data.deadline) {
+                    const d = new Date(data.deadline);
+                    const dateStr = d.toISOString().split('T')[0];
+                    document.getElementById('edit-deadline-input').value = dateStr;
+                }
+    
                 document.getElementById('order-edit-controls').style.display = 'block';
-                document.getElementById('status-toggle-btn').innerText = data.status === "Unfinished" ? "Finish" : "Open";
-            }
+                document.getElementById('order-edit-controls').scrollIntoView({ behavior: 'smooth' });
+            } else { alert("Order not found."); }
         });
     }
-
+    
     function toggleOrderStatus() {
-        const newStatus = currentEditStatus === "Unfinished" ? "Finished" : "Unfinished";
-        fetch(GOOGLE_SCRIPT_URL, { method: "POST", body: JSON.stringify({ type: "UPDATE_ORDER_STATUS", orderCode: currentEditOrderCode, newStatus: newStatus })
-        }).then(() => location.reload());
+        const btn = document.getElementById('save-order-btn');
+        btn.disabled = true;
+        btn.innerText = "⏳ Saving...";
+    
+        const payload = {
+            type: "UPDATE_ORDER_STATUS",
+            orderCode: currentEditOrderCode,
+            product: document.getElementById('edit-prod-input').value,
+            details: document.getElementById('edit-details-input').value,
+            poNumber: document.getElementById('edit-po-input').value,
+            deadline: document.getElementById('edit-deadline-input').value,
+            status: document.getElementById('edit-status-select').value
+        };
+    
+        fetch(GOOGLE_SCRIPT_URL, { 
+            method: "POST", 
+            mode: "no-cors", 
+            body: JSON.stringify(payload) 
+        })
+        .then(() => {
+            alert("✅ Order Updated Successfully!");
+            location.reload(); // Reload to refresh all active lists
+        })
+        .catch(() => {
+            alert("Error saving changes.");
+            btn.disabled = false;
+            btn.innerText = "💾 Save All Changes";
+        });
     }
 
     function handleManualSubmit() { onScanSuccess(document.getElementById('manual-code-input').value); }
