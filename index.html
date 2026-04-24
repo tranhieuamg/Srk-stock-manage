@@ -99,12 +99,12 @@
                         <option value="contract">Contract / PO Tracked</option>
                     </select>
                     <div id="contract-logic-block" style="display:none;">
-                        <div class="checkbox-container"><input type="checkbox" id="check-has-po" onchange="togglePOInput()"><label for="check-has-po">PO Available?</label></div>
+                        <div class="checkbox-container"><input type="checkbox" id="check-has-po" onchange="togglePOInput()"><label for="check-has-po">PO / AWB Available?</label></div>
                         <div class="checkbox-container"><input type="checkbox" id="check-batches" onchange="toggleBatchSection()"><label for="check-batches">Batching?</label></div>
                         <div class="checkbox-container"><input type="checkbox" id="check-shared-po" onchange="updateCodePreview()"><label for="check-shared-po">Shared PO?</label></div>
                         <div id="po-input-block" style="display:none;">
-                            <input type="text" id="po-number-input" placeholder="PO Number" oninput="updateCodePreview()">
-                            <input type="text" id="po-description" placeholder="PO Description">
+                            <input type="text" id="po-number-input" placeholder="PO / AWB Number" oninput="updateCodePreview()">
+                            <input type="text" id="po-description" placeholder="Description">
                         </div>
                         <input type="number" id="batch-number-input" placeholder="Batch #" value="1" style="display:none;" oninput="updateCodePreview()">
                         <div id="code-preview" class="sub-section" style="font-size:0.7rem; background:#eee;">Order ID: N/A</div>
