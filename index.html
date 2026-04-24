@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Warehouse Pro v4.3.5</title>
+    <title>Warehouse Pro v4.3.6</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -116,7 +116,6 @@
                         <option value="" disabled selected>Select reason...</option>
                         <option value="For Testing">For Testing</option>
                         <option value="For Making an Order">For Making an Order</option>
-                        <option value="For Stocking">For New Stock</option>
                     </select>
                     <div id="order-code-input-block" style="display:none;">
                         <button type="button" class="btn-purple" id="fetch-active-orders-btn" onclick="fetchActiveOrders(true)">📋 Fetch Orders</button>
@@ -157,7 +156,10 @@
             </div>
             <div id="order-edit-controls" style="display:none; margin-top:15px; background:#f9f9f9; padding:15px; border-radius:8px; text-align: left; border: 1px solid #ddd;">
                 <p><strong>Order ID:</strong> <span id="edit-id-display" style="color:var(--purple); font-weight:bold;"></span></p>
-                <p><strong>Customer:</strong> <span id="edit-cust" style="color:#666;"></span></p>
+                
+                <label>Customer Name:</label>
+                <input type="text" id="edit-cust-input"> 
+                
                 <label>Product Model:</label><input type="text" id="edit-prod-input">
                 <label>Details:</label><textarea id="edit-details-input" style="height: 80px;"></textarea>
                 <label>PO Number:</label><input type="text" id="edit-po-input">
@@ -306,15 +308,16 @@
             });
     }
 
-    // FIX: PROPER DATA MAPPING TO INPUT VALUES
+    // CHANGE 2: POPULATING CUSTOMER NAME INPUT
     function findOrderForEdit(id) {
             if(!id) return;
             const controls = document.getElementById('order-edit-controls');
             controls.style.display = 'block';
             
-            // Immediate UI reset to clear "Ghost Data"
             document.getElementById('edit-id-display').innerText = "⏳ Loading " + id;
-            document.getElementById('edit-cust').innerText = "Fetching details...";
+            
+            // Clear all inputs for Ghost Data protection
+            document.getElementById('edit-cust-input').value = ""; 
             document.getElementById('edit-prod-input').value = "";
             document.getElementById('edit-details-input').value = "";
             document.getElementById('edit-po-input').value = "";
@@ -324,20 +327,18 @@
             fetch(`${GOOGLE_SCRIPT_URL}?mode=order_lookup&id=${id}`)
                 .then(res => res.json())
                 .then(data => {
-                    console.log("Order Data Received:", data); // Debugging line
-                    
                     if (data.found) {
                         currentEditOrderCode = id;
                         document.getElementById('edit-id-display').innerText = id;
-                        document.getElementById('edit-cust').innerText = data.customer;
                         
-                        // Standardizing assignment to .value
+                        // Map Data to inputs
+                        document.getElementById('edit-cust-input').value = data.customer || "";
                         document.getElementById('edit-prod-input').value = data.product || "";
                         document.getElementById('edit-details-input').value = data.details || "";
                         document.getElementById('edit-po-input').value = data.poNumber || "";
                         document.getElementById('edit-status-select').value = data.status || "Unfinished";
                         
-                        // Formatting Date for HTML Input (Required format: YYYY-MM-DD)
+                        // Date conversion
                         if(data.deadline) {
                             const d = new Date(data.deadline);
                             if (!isNaN(d.getTime())) {
@@ -350,26 +351,25 @@
     
                         document.getElementById('save-order-btn').disabled = false;
                         document.getElementById('save-order-btn').innerText = "💾 Save All Changes";
-                        
-                        // Scroll into view so staff sees the loaded data
                         controls.scrollIntoView({ behavior: 'smooth' });
                     } else {
-                        alert("Order ID " + id + " not found in database.");
+                        alert("Order ID " + id + " not found.");
                         controls.style.display = 'none';
                     }
                 })
                 .catch(err => {
-                    console.error("Fetch error:", err);
-                    alert("Connection error. Check your Script URL and Deployment.");
+                    alert("Error fetching details.");
                 });
         }
 
+    // CHANGE 3: INCLUDING MODIFIED CUSTOMER NAME IN PAYLOAD
     function toggleOrderStatus() {
         const btn = document.getElementById('save-order-btn');
         btn.disabled = true; btn.innerText = "⏳ Saving...";
         const payload = {
             type: "UPDATE_ORDER_STATUS",
             orderCode: currentEditOrderCode,
+            customer: document.getElementById('edit-cust-input').value, // Included new field
             product: document.getElementById('edit-prod-input').value,
             details: document.getElementById('edit-details-input').value,
             poNumber: document.getElementById('edit-po-input').value,
@@ -415,7 +415,7 @@
         fetch(`${GOOGLE_SCRIPT_URL}?mode=active_orders`).then(r=>r.json()).then(d=>{
             btn.disabled = false; btn.innerText = "Load Orders";
             const s=document.getElementById('task-order-link');
-            s.innerHTML='<option value="R&D Project">R&D Project</option>';
+            s.innerHTML='<option value="R&D Project">R&D Project</option><option value="Stocking">Stocking</option>';
             if(d.orders) d.orders.forEach(o=>{ s.innerHTML+=`<option value="${o.code}">${o.code}</option>`; });
         });
     }
