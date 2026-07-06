@@ -435,6 +435,8 @@
             staffName: localStorage.getItem("warehouse_staff_name"), purpose: document.getElementById('manual-purpose').value,
             orderCode: (currentAction==='OUT') ? (document.getElementById('removal-reason').value === "For Making an Order" ? document.getElementById('purpose-order').value : document.getElementById('removal-reason').value) : "",
             poValue: (currentAction==='IN') ? (document.getElementById('check-has-po').checked ? document.getElementById('po-number-input').value : "Temp") : "N/A",
+            poDescription: (currentAction==='IN') ? document.getElementById('po-description').value : "",
+            wasted: (currentAction==='OUT' && document.getElementById('wasted-check').checked) ? "Yes" : "",
             stockingOrderId: (currentAction==='IN') ? tid : scannedBatchId
         };
 
