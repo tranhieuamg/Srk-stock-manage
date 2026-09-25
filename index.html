@@ -426,7 +426,7 @@
         if(currentAction==='OUT' && (!isOrderValid || qty > currentStockValue)) { alert("Check Stock/Order/Reason!"); return; }
         const btn = document.getElementById('final-submit-btn');
         btn.disabled = true; btn.innerText = "⏳ Saving...";
-        
+    
         const scenario = document.getElementById('addition-scenario').value;
         const tid = (currentAction === 'IN' && scenario === 'contract') ? updateCodePreview() : "";
         generatedInId = tid;
@@ -435,7 +435,13 @@
             type: "STOCK_MOVE", partId: currentPartId, partName: currentPartName, action: currentAction, quantity: qty,
             staffName: localStorage.getItem("warehouse_staff_name"), purpose: document.getElementById('manual-purpose').value,
             orderCode: (currentAction==='OUT') ? (document.getElementById('removal-reason').value === "For Making an Order" ? document.getElementById('purpose-order').value : document.getElementById('removal-reason').value) : "",
-            poValue: (currentAction==='IN') ? (document.getElementById('check-has-po').checked ? document.getElementById('po-number-input').value : "Temp") : "N/A",
+            poValue: (currentAction==='OUT')
+                ? "N/A"
+                : (scenario === 'general'
+                    ? "N/A"
+                    : (document.getElementById('check-has-po').checked
+                        ? document.getElementById('po-number-input').value
+                        : "Temp")),
             poDescription: (currentAction==='IN') ? document.getElementById('po-description').value : "",
             wasted: (currentAction==='OUT' && document.getElementById('wasted-check').checked) ? "Yes" : "",
             stockingOrderId: (currentAction==='IN') ? tid : scannedBatchId
